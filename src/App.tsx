@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState, type FormEvent, type ReactNode } from 'react';
 import {
-  ArrowRight, Bell, BusFront, CheckCircle2, ClipboardList, Clock3, GraduationCap,
-  LogOut, QrCode, ShieldCheck, Users, ScanLine, Play, ArrowLeft, UserRound,
+  ArrowRight, Bell, BusFront, CheckCircle2, GraduationCap,
+  LogOut, QrCode, ShieldCheck, Users, ScanLine, Play, ArrowLeft,
 } from 'lucide-react';
 import type { Session } from '@supabase/supabase-js';
 import { isSupabaseConfigured, supabase } from './lib/supabase';
