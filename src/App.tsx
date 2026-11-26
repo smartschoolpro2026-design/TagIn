@@ -111,15 +111,41 @@ export default function App() {
   async function signIn(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     if (!client) return;
-    setBusy(true); setError('');
-    const { data: loginData, error: authError } = await client.functions.invoke('phone-password-login', { body: { phone: phone.trim(), password } });
-    if (authError || !loginData?.session?.access_token || !loginData?.session?.refresh_token) {
-      setError('Phone number or password is incorrect. Check your details or contact your school administrator.');
-    } else {
-      const { error: sessionError } = await client.auth.setSession({ access_token: loginData.session.access_token, refresh_token: loginData.session.refresh_token });
-      if (sessionError) setError('We could not start your secure session. Please try again.');
+    setBusy(true);
+    setError('');
+    const timeout = <T,>(promise: Promise<T>, ms: number, message: string) =>
+      Promise.race([
+        promise,
+        new Promise<never>((_, reject) => window.setTimeout(() => reject(new Error(message)), ms)),
+      ]);
+    try {
+      const { data: loginData, error: authError } = await timeout(
+        client.functions.invoke('phone-password-login', {
+          body: { phone: phone.trim(), password },
+        }),
+        15000,
+        'The login service is taking too long to respond. Please check your connection and try again.',
+      );
+      if (authError || !loginData?.session?.access_token || !loginData?.session?.refresh_token) {
+        setError('Phone number or password is incorrect. Check your details or contact your school administrator.');
+        return;
+      }
+      const { error: sessionError } = await timeout(
+        client.auth.setSession({
+          access_token: loginData.session.access_token,
+          refresh_token: loginData.session.refresh_token,
+        }),
+        10000,
+        'Your details were accepted, but TagIn could not finish opening your secure session. Please try again.',
+      );
+      if (sessionError) {
+        setError('Your details were accepted, but we could not start your secure session. Please try again.');
+      }
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'We could not complete sign-in. Please try again.');
+    } finally {
+      setBusy(false);
     }
-    setBusy(false);
   }
 
   async function changePassword(event: FormEvent<HTMLFormElement>) {
