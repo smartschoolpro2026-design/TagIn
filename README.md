@@ -16,7 +16,7 @@ A multi-school student arrival, departure, and transport coordination platform.
 4. Confirm the two public Supabase values in `.env.local`.
 5. Run `npm run dev`.
 
-The frontend signs in using a confirmed phone number and password. Phone/password sign-in must be enabled in Supabase Auth. Accounts are provisioned by a trusted administrator workflow; never expose the Supabase service-role key in the browser.
+The frontend signs in using a confirmed phone number and password. Enable Supabase Auth > Sign In / Providers > Phone, and turn OFF phone confirmation because TagIn provisions accounts administratively and does not send SMS verification codes. A Twilio or other SMS gateway is not required for this password-based flow when phone confirmation is disabled. Accounts are provisioned by a trusted administrator workflow; never expose the Supabase service-role key in the browser.
 
 Never commit secrets. `.env.local` is ignored by Git.
 
