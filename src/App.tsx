@@ -62,16 +62,17 @@ export default function App() {
       setLoading(false);
       return;
     }
+    const supabaseClient = client;
     let alive = true;
     const loadAccount = async () => {
       setLoading(true);
       setError('');
       const [profileResult, membershipsResult] = await Promise.all([
-        client.from('profiles')
+        supabaseClient.from('profiles')
           .select('full_name, platform_role, is_active, must_change_password')
           .eq('id', session.user.id)
           .maybeSingle(),
-        client.from('school_memberships')
+        supabaseClient.from('school_memberships')
           .select('school_id, role, status, schools(name, slug)')
           .eq('user_id', session.user.id)
           .eq('status', 'active'),
