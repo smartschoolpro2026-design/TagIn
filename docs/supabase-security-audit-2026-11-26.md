@@ -19,8 +19,9 @@ The existing authorization model uses `platform_role` for platform super-admin s
 2. **Future Data API exposure:** Default table, sequence and function grants for objects created by the `postgres` role have been revoked for `anon` and `authenticated`. Future API exposure must be explicitly granted.
 3. **Private helper function:** `private.is_guardian_of_student(uuid, uuid)` had an unnecessary `PUBLIC EXECUTE` grant. It has been revoked; authenticated users retain their explicit execute permission.
 4. **One-off collector expiry:** Parent policies previously allowed `valid_on >= CURRENT_DATE`, which permitted a future-dated one-off collector. Both insert and update policies now require `valid_on = CURRENT_DATE`.
-5. **Security Advisor:** No security lints were returned after the changes.
-6. **Performance Advisor:** It reports 10 unindexed foreign keys, 8 multiple-permissive-policy warnings, and 12 unused indexes. Unused-index warnings are expected before real traffic. Index and policy tuning should be done after validating expected query patterns and workflows.
+5. **Server-managed password flag:** Authenticated users can update only their own profile name at the column-privilege level; they cannot change `must_change_password`. The `change-password` Edge Function (JWT verification enabled) clears this flag after the signed-in user changes their password through Supabase Auth.
+6. **Security Advisor:** No security lints were returned after the changes.
+7. **Performance Advisor:** It reports 10 unindexed foreign keys, 8 multiple-permissive-policy warnings, and 12 unused indexes. Unused-index warnings are expected before real traffic. Index and policy tuning should be done after validating expected query patterns and workflows.
 
 ## Remaining items before production
 
@@ -31,7 +32,9 @@ The existing authorization model uses `platform_role` for platform super-admin s
 - Configure and test phone/password Auth before issuing user accounts.
 - The database migration history includes earlier foundation and student-operations migrations. Their original SQL files still need to be captured in the repository to make a clean, reproducible database bootstrap.
 
-## Applied migration
+## Applied migrations
 
-`20261126135114_tagin_security_hardening_v1`  
-See `supabase/migrations/20261126135114_tagin_security_hardening_v1.sql`.
+- `20261126135114_tagin_security_hardening_v1` — `supabase/migrations/20261126135114_tagin_security_hardening_v1.sql`
+- `20261126135345_tagin_profile_column_privileges_v1` — `supabase/migrations/20261126135345_tagin_profile_column_privileges_v1.sql`
+
+The `change-password` Edge Function is deployed and active with JWT verification enabled.
