@@ -121,14 +121,17 @@ export default function App() {
     }
     setBusy(true);
     setError('');
-    const { error: functionError } = await supabase.functions.invoke('change-password', {
-      body: { newPassword },
-    });
-    if (functionError) {
-      setError('Password could not be updated. Please try again or contact your administrator.');
+    const { error: passwordError } = await supabase.auth.updateUser({ password: newPassword });
+    if (passwordError) {
+      setError(passwordError.message);
     } else {
-      setProfile((current) => current ? { ...current, must_change_password: false } : current);
-      setNewPassword('');
+      const { error: functionError } = await supabase.functions.invoke('change-password', { body: {} });
+      if (functionError) {
+        setError('Your password changed, but account setup could not be finalized. Please sign in again or contact your administrator.');
+      } else {
+        setProfile((current) => current ? { ...current, must_change_password: false } : current);
+        setNewPassword('');
+      }
     }
     setBusy(false);
   }
