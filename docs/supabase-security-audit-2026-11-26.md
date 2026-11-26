@@ -26,6 +26,7 @@ The existing authorization model uses `platform_role` for platform super-admin s
 ## Remaining items before production
 
 - The `supabase_admin` role has separate default privileges. The integration could not alter those defaults due to PostgreSQL permission restrictions. Existing application tables are owned by `postgres`, and the `postgres` defaults are hardened. Confirm the Dashboard-created-object path before relying on `supabase_admin` defaults.
+- The one-off collector policy currently compares against PostgreSQL `CURRENT_DATE`. Before production, add a school timezone setting and enforce expiry against the school's local date so the cutoff is exactly local midnight.
 - Gate scans should be performed through a server-side function/RPC that validates the tag, staff membership, authorized collector, and event transition; do not permit arbitrary client inserts to establish attendance state.
 - Add explicit state-transition checks for bus events and duplicate scan protection.
 - Confirm private Storage buckets and signed-URL policies before uploading guardian/collector photos.
