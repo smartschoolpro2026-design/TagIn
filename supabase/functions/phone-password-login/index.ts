@@ -16,15 +16,15 @@ function jsonResponse(status: number, body: Record<string, unknown>) {
 
 function normalizePhone(value: unknown): string | null {
   if (typeof value !== "string" || value.length > 40) return null;
-  const compact = value.trim().replace(/[\\s().-]/g, "");
-  const normalized = compact.startsWith("00") ? `+${compact.slice(2)}` : compact;
-  return /^\\+[1-9]\\d{7,14}$/.test(normalized) ? normalized : null;
+  const compact = value.trim().replace(/[\s().-]/g, "");
+  const normalized = compact.startsWith("00") ? "+" + compact.slice(2) : compact;
+  return /^\+[1-9]\d{7,14}$/.test(normalized) ? normalized : null;
 }
 
 async function authAlias(phone: string): Promise<string> {
   const digest = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(phone));
   const hex = Array.from(new Uint8Array(digest), (byte) => byte.toString(16).padStart(2, "0")).join("");
-  return `u-${hex}@login.tagin.invalid`;
+  return "u-" + hex + "@login.tagin.invalid";
 }
 
 Deno.serve(async (request: Request) => {
