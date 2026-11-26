@@ -37,21 +37,24 @@ Deno.serve(async (request: Request) => {
   if (!supabaseUrl || !anonKey || !serviceRoleKey) return jsonResponse(500, { error: "Server configuration is incomplete" });
 
   const accessToken = authorization.slice("Bearer ".length);
-  const publicClient = createClient(supabaseUrl, anonKey, {
+  const userClient = createClient(supabaseUrl, anonKey, {
     auth: { autoRefreshToken: false, persistSession: false },
   });
-  const { data: userData, error: userError } = await publicClient.auth.getUser(accessToken);
+  const { error: sessionError } = await userClient.auth.setSession({
+    access_token: accessToken,
+    refresh_token: accessToken,
+  });
+  if (sessionError) return jsonResponse(401, { error: "Invalid or expired session" });
+
+  const { data: userData, error: userError } = await userClient.auth.getUser();
   if (userError || !userData.user) return jsonResponse(401, { error: "Invalid or expired session" });
+
+  const { error: passwordError } = await userClient.auth.updateUser({ password: body.newPassword });
+  if (passwordError) return jsonResponse(400, { error: passwordError.message });
 
   const adminClient = createClient(supabaseUrl, serviceRoleKey, {
     auth: { autoRefreshToken: false, persistSession: false },
   });
-  const { error: passwordError } = await adminClient.auth.admin.updateUserById(
-    userData.user.id,
-    { password: body.newPassword },
-  );
-  if (passwordError) return jsonResponse(400, { error: passwordError.message });
-
   const { error: profileError } = await adminClient
     .from("profiles")
     .update({ must_change_password: false })
