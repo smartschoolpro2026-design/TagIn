@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState, type FormEvent, type ReactNode } from 'react';
 import {
-  ArrowRight, Bell, BusFront, CheckCircle2, GraduationCap,
+  ArrowRight, Bell, BusFront, CheckCircle2, ClipboardList, GraduationCap,
   LogOut, QrCode, ShieldCheck, Users,
 } from 'lucide-react';
 import type { Session } from '@supabase/supabase-js';
@@ -13,8 +13,9 @@ type Profile = {
   must_change_password: boolean;
 };
 type Membership = {
+  id: string;
   school_id: string;
-  role: 'school_admin' | 'gate_staff' | 'bus_staff' | 'parent';
+  role: 'school_admin' | 'staff' | 'gate_staff' | 'bus_staff' | 'parent';
   status: 'active' | 'inactive';
   schools: { name: string; slug: string } | null;
 };
@@ -23,6 +24,8 @@ export default function App() {
   const [session, setSession] = useState<Session | null>(null);
   const [profile, setProfile] = useState<Profile | null>(null);
   const [memberships, setMemberships] = useState<Membership[]>([]);
+  const [staffJobTitle, setStaffJobTitle] = useState('Staff member');
+  const [staffPermissions, setStaffPermissions] = useState<string[]>([]);
   const [schoolId, setSchoolId] = useState('');
   const [phone, setPhone] = useState('');
   const [password, setPassword] = useState('');
@@ -54,7 +57,7 @@ export default function App() {
       setLoading(true); setError('');
       const [profileResult, membershipsResult] = await Promise.all([
         supabaseClient.from('profiles').select('full_name, platform_role, is_active, must_change_password').eq('id', session.user.id).maybeSingle(),
-        supabaseClient.from('school_memberships').select('school_id, role, status, schools(name, slug)').eq('user_id', session.user.id).eq('status', 'active'),
+        supabaseClient.from('school_memberships').select('id, school_id, role, status, schools(name, slug)').eq('user_id', session.user.id).eq('status', 'active'),
       ]);
       if (!alive) return;
       if (profileResult.error || membershipsResult.error) {
@@ -77,6 +80,32 @@ export default function App() {
     () => memberships.find((membership) => membership.school_id === schoolId) ?? memberships[0],
     [memberships, schoolId],
   );
+
+  useEffect(() => {
+    if (!client || !selectedMembership || selectedMembership.role !== 'staff') {
+      setStaffJobTitle('Staff member');
+      setStaffPermissions([]);
+      return;
+    }
+    let alive = true;
+    const loadStaffAccess = async () => {
+      const [profileResult, permissionsResult] = await Promise.all([
+        client.from('staff_profiles').select('job_title').eq('membership_id', selectedMembership.id).maybeSingle(),
+        client.from('staff_permissions').select('permission_key').eq('membership_id', selectedMembership.id),
+      ]);
+      if (!alive) return;
+      if (profileResult.error || permissionsResult.error) {
+        setError('We could not load your assigned staff access. Please contact your school administrator.');
+        setStaffJobTitle('Staff member');
+        setStaffPermissions([]);
+        return;
+      }
+      setStaffJobTitle(profileResult.data?.job_title ?? 'Staff member');
+      setStaffPermissions((permissionsResult.data ?? []).map((item) => item.permission_key));
+    };
+    void loadStaffAccess();
+    return () => { alive = false; };
+  }, [client, selectedMembership?.id, selectedMembership?.role]);
 
   async function signIn(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -126,12 +155,19 @@ export default function App() {
   if (!profile) return <main className="auth-shell"><Brand /><section className="auth-card"><h1>Account setup incomplete.</h1><p className="muted">{error || 'Please contact your school administrator.'}</p><button className="secondary-button" onClick={signOut}>Sign out</button></section></main>;
 
   const isPlatformAdmin = profile.platform_role === 'super_admin';
-  const role = isPlatformAdmin ? 'Platform administrator' : selectedMembership?.role?.replace('_', ' ') ?? 'School member';
+  const isSchoolAdmin = selectedMembership?.role === 'school_admin';
+  const isUnifiedStaff = selectedMembership?.role === 'staff';
+  const hasStaffPermission = (permission: string) => staffPermissions.includes(permission);
+  const role = isPlatformAdmin
+    ? 'Platform administrator'
+    : isUnifiedStaff
+      ? `School staff · ${staffJobTitle}`
+      : selectedMembership?.role?.replaceAll('_', ' ') ?? 'School member';
   const schoolName = selectedMembership?.schools?.name ?? (isPlatformAdmin ? 'All schools' : 'No active school');
-  return <main className="workspace-shell"><header className="workspace-topbar"><Brand /><div className="account-actions"><span className="user-chip">{profile.full_name}</span><button className="icon-button" onClick={signOut} disabled={busy} aria-label="Sign out"><LogOut size={18} /></button></div></header><section className="welcome-panel"><div><p className="eyebrow">YOUR TAGIN WORKSPACE</p><h1>Hello, {profile.full_name.split(' ')[0]}.</h1><p className="muted">Your school day, connected.</p></div><div className="welcome-mark"><GraduationCap size={42} /></div></section><section className="workspace-meta"><div><span className="meta-label">ACCESS LEVEL</span><strong>{role}</strong></div><div><span className="meta-label">SCHOOL</span>{memberships.length > 1 ? <select aria-label="Select school" value={selectedMembership?.school_id ?? ''} onChange={(event) => setSchoolId(event.target.value)}>{memberships.map((item) => <option key={item.school_id} value={item.school_id}>{item.schools?.name ?? item.school_id}</option>)}</select> : <strong>{schoolName}</strong>}</div></section>{error && <p className="form-error" role="alert">{error}</p>}<section className="workspace-section"><p className="eyebrow">YOUR WORKSPACE</p><h2>{isPlatformAdmin ? 'Platform overview' : 'School operations'}</h2><div className="workspace-grid">{isPlatformAdmin && <WorkspaceCard icon={<ShieldCheck />} title="School management" description="Create and manage school workspaces and administrators." />}{(isPlatformAdmin || selectedMembership?.role === 'school_admin') && <WorkspaceCard icon={<Users />} title="People and students" description="Manage student records, families, and staff access." />}{(isPlatformAdmin || ['school_admin', 'gate_staff'].includes(selectedMembership?.role ?? '')) && <WorkspaceCard icon={<QrCode />} title="Gate check-in" description="Prepare secure student tag scanning and attendance workflows." />}{(isPlatformAdmin || ['school_admin', 'bus_staff'].includes(selectedMembership?.role ?? '')) && <WorkspaceCard icon={<BusFront />} title="Transport" description="Manage bus pickup, boarding, and drop-off workflows." />}{(isPlatformAdmin || selectedMembership?.role === 'parent') && <WorkspaceCard icon={<Bell />} title="Family updates" description="View your children's arrival, departure, and transport notifications." />}{!isPlatformAdmin && !selectedMembership && <WorkspaceCard icon={<ShieldCheck />} title="No school assigned" description="Your account is active, but no active school membership was found. Contact your administrator." />}</div></section><footer className="workspace-footer"><span>TagIn · Safer school journeys</span><span><CheckCircle2 size={14} /> Secure session</span></footer></main>;
+  return <main className="workspace-shell"><header className="workspace-topbar"><Brand /><div className="account-actions"><span className="user-chip">{profile.full_name}</span><button className="icon-button" onClick={signOut} disabled={busy} aria-label="Sign out"><LogOut size={18} /></button></div></header><section className="welcome-panel"><div><p className="eyebrow">YOUR TAGIN WORKSPACE</p><h1>Hello, {profile.full_name.split(' ')[0]}.</h1><p className="muted">Your school day, connected.</p></div><div className="welcome-mark"><GraduationCap size={42} /></div></section><section className="workspace-meta"><div><span className="meta-label">ACCESS LEVEL</span><strong>{role}</strong></div><div><span className="meta-label">SCHOOL</span>{memberships.length > 1 ? <select aria-label="Select school" value={selectedMembership?.school_id ?? ''} onChange={(event) => setSchoolId(event.target.value)}>{memberships.map((item) => <option key={item.school_id} value={item.school_id}>{item.schools?.name ?? item.school_id}</option>)}</select> : <strong>{schoolName}</strong>}</div></section>{error && <p className="form-error" role="alert">{error}</p>}<section className="workspace-section"><p className="eyebrow">YOUR WORKSPACE</p><h2>{isPlatformAdmin ? 'Platform overview' : 'School operations'}</h2><div className="workspace-grid">{isPlatformAdmin && <WorkspaceCard icon={<ShieldCheck />} title="School management" description="Create and manage school workspaces and administrators." />}{(isPlatformAdmin || isSchoolAdmin || (isUnifiedStaff && (hasStaffPermission('students.create') || hasStaffPermission('students.update') || hasStaffPermission('registers.manage')))) && <WorkspaceCard icon={<Users />} title={isUnifiedStaff ? 'Student registers' : 'People and students'} description={isUnifiedStaff ? 'Manage the student records and class registers assigned to you.' : 'Manage student records, families, and staff access.'} />}{(isPlatformAdmin || isSchoolAdmin || (isUnifiedStaff && (hasStaffPermission('gate.scan') || hasStaffPermission('gate.check_in') || hasStaffPermission('gate.check_out'))) || selectedMembership?.role === 'gate_staff') && <WorkspaceCard icon={<QrCode />} title="Gate check-in" description="Scan student tags and record authorized arrival and departure activity." />}{(isPlatformAdmin || isSchoolAdmin || (isUnifiedStaff && (hasStaffPermission('transport.view_assigned') || hasStaffPermission('transport.board') || hasStaffPermission('transport.drop_off'))) || selectedMembership?.role === 'bus_staff') && <WorkspaceCard icon={<BusFront />} title="Transport" description="View assigned journeys and record student boarding and drop-off." />}{(isPlatformAdmin || isSchoolAdmin) && <WorkspaceCard icon={<ClipboardList />} title="Reports and overview" description="Review attendance, school activity, and operational reports." />}{(isPlatformAdmin || selectedMembership?.role === 'parent') && <WorkspaceCard icon={<Bell />} title="Family updates" description="View your children's arrival, departure, and transport notifications." />}{!isPlatformAdmin && !selectedMembership && <WorkspaceCard icon={<ShieldCheck />} title="No school assigned" description="Your account is active, but no active school membership was found. Contact your administrator." />}</div></section><footer className="workspace-footer"><span>TagIn · Safer school journeys</span><span><CheckCircle2 size={14} /> Secure session</span></footer></main>;
 }
 
 function Brand() { return <a className="brand" href="#top"><span className="brand-mark"><QrCode size={20}/></span><span>TagIn</span></a>; }
 function WorkspaceCard({ icon, title, description }: { icon: ReactNode; title: string; description: string }) {
-  return <article className="workspace-card"><div className="workspace-card-icon">{icon}</div><h3>{title}</h3><p>{description}</p><span className="coming-soon">FOUNDATION READY</span></article>;
+  return <article className="workspace-card"><div className="workspace-card-icon">{icon}</div><h3>{title}</h3><p>{description}</p><span className="coming-soon">MODULE IN DEVELOPMENT</span></article>;
 }
