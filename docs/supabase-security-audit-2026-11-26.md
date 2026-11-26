@@ -30,7 +30,7 @@ The existing authorization model uses `platform_role` for platform super-admin s
 - Gate scans should be performed through a server-side function/RPC that validates the tag, staff membership, authorized collector, and event transition; do not permit arbitrary client inserts to establish attendance state.
 - Add explicit state-transition checks for bus events and duplicate scan protection.
 - Confirm private Storage buckets and signed-URL policies before uploading guardian/collector photos.
-- Enable Supabase Phone as a password-based identifier with phone confirmation disabled; this avoids SMS-provider credentials. Phone numbers must be checked by the school during account creation. Configure and test this before issuing user accounts.
+- TagIn uses Supabase email/password Auth internally, with a deterministic SHA-256 alias derived from each normalized E.164 phone number (`u-<hex>@login.tagin.invalid`). The client never receives or stores the alias as a login credential; `phone-password-login` derives it server-side and returns the Supabase session. Phone Auth and SMS providers are not used. The future account-provisioning function must use the exact same normalization and alias algorithm, confirm internal email identities administratively, and enforce unique phone numbers.
 - The database migration history includes earlier foundation and student-operations migrations. Their original SQL files still need to be captured in the repository to make a clean, reproducible database bootstrap.
 
 ## Applied migrations
