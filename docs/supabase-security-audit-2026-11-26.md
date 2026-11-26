@@ -30,7 +30,7 @@ The existing authorization model uses `platform_role` for platform super-admin s
 - Gate scans should be performed through a server-side function/RPC that validates the tag, staff membership, authorized collector, and event transition; do not permit arbitrary client inserts to establish attendance state.
 - Add explicit state-transition checks for bus events and duplicate scan protection.
 - Confirm private Storage buckets and signed-URL policies before uploading guardian/collector photos.
-- Configure and test phone/password Auth before issuing user accounts.
+- Enable Supabase Phone as a password-based identifier with phone confirmation disabled; this avoids SMS-provider credentials. Phone numbers must be checked by the school during account creation. Configure and test this before issuing user accounts.
 - The database migration history includes earlier foundation and student-operations migrations. Their original SQL files still need to be captured in the repository to make a clean, reproducible database bootstrap.
 
 ## Applied migrations
