@@ -102,13 +102,18 @@ export default function App() {
     if (!supabase) return;
     setBusy(true);
     setError('');
-    const { error: authError } = await supabase.auth.signInWithPassword({
-      phone: phone.trim(),
-      password,
+    const { data: loginData, error: authError } = await supabase.functions.invoke('phone-password-login', {
+      body: { phone: phone.trim(), password },
     });
-    if (authError) setError(authError.message.includes('Invalid login credentials')
-      ? 'Phone number or password is incorrect.'
-      : authError.message);
+    if (authError || !loginData?.session?.access_token || !loginData?.session?.refresh_token) {
+      setError('Phone number or password is incorrect. Check your details or contact your school administrator.');
+    } else {
+      const { error: sessionError } = await supabase.auth.setSession({
+        access_token: loginData.session.access_token,
+        refresh_token: loginData.session.refresh_token,
+      });
+      if (sessionError) setError('We could not start your secure session. Please try again.');
+    }
     setBusy(false);
   }
 
