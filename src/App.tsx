@@ -17,6 +17,7 @@ type Membership = {
 };
 
 export default function App() {
+  const client = supabase;
   const [session, setSession] = useState<Session | null>(null);
   const [profile, setProfile] = useState<Profile | null>(null);
   const [memberships, setMemberships] = useState<Membership[]>([]);
@@ -29,18 +30,18 @@ export default function App() {
   const [error, setError] = useState('');
 
   useEffect(() => {
-    if (!supabase) {
+    if (!client) {
       setLoading(false);
       return;
     }
     let alive = true;
-    supabase.auth.getSession().then(({ data }) => {
+    client.auth.getSession().then(({ data }) => {
       if (alive) {
         setSession(data.session);
         setLoading(false);
       }
     });
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, nextSession) => {
+    const { data: { subscription } } = client.auth.onAuthStateChange((_event, nextSession) => {
       setSession(nextSession);
       if (!nextSession) {
         setProfile(null);
@@ -66,11 +67,11 @@ export default function App() {
       setLoading(true);
       setError('');
       const [profileResult, membershipsResult] = await Promise.all([
-        supabase.from('profiles')
+        client.from('profiles')
           .select('full_name, platform_role, is_active, must_change_password')
           .eq('id', session.user.id)
           .maybeSingle(),
-        supabase.from('school_memberships')
+        client.from('school_memberships')
           .select('school_id, role, status, schools(name, slug)')
           .eq('user_id', session.user.id)
           .eq('status', 'active'),
@@ -99,16 +100,16 @@ export default function App() {
 
   async function signIn(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    if (!supabase) return;
+    if (!client) return;
     setBusy(true);
     setError('');
-    const { data: loginData, error: authError } = await supabase.functions.invoke('phone-password-login', {
+    const { data: loginData, error: authError } = await client.functions.invoke('phone-password-login', {
       body: { phone: phone.trim(), password },
     });
     if (authError || !loginData?.session?.access_token || !loginData?.session?.refresh_token) {
       setError('Phone number or password is incorrect. Check your details or contact your school administrator.');
     } else {
-      const { error: sessionError } = await supabase.auth.setSession({
+      const { error: sessionError } = await client.auth.setSession({
         access_token: loginData.session.access_token,
         refresh_token: loginData.session.refresh_token,
       });
@@ -119,18 +120,18 @@ export default function App() {
 
   async function changePassword(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    if (!supabase) return;
+    if (!client) return;
     if (newPassword.length < 12) {
       setError('Choose a password with at least 12 characters.');
       return;
     }
     setBusy(true);
     setError('');
-    const { error: passwordError } = await supabase.auth.updateUser({ password: newPassword });
+    const { error: passwordError } = await client.auth.updateUser({ password: newPassword });
     if (passwordError) {
       setError(passwordError.message);
     } else {
-      const { error: functionError } = await supabase.functions.invoke('change-password', { body: {} });
+      const { error: functionError } = await client.functions.invoke('change-password', { body: {} });
       if (functionError) {
         setError('Your password changed, but account setup could not be finalized. Please sign in again or contact your administrator.');
       } else {
@@ -142,13 +143,13 @@ export default function App() {
   }
 
   async function signOut() {
-    if (!supabase) return;
+    if (!client) return;
     setBusy(true);
-    await supabase.auth.signOut();
+    await client.auth.signOut();
     setBusy(false);
   }
 
-  if (!isSupabaseConfigured || !supabase) {
+  if (!isSupabaseConfigured || !client) {
     return (
       <main className="auth-shell">
         <Brand />
