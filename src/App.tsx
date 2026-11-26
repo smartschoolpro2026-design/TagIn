@@ -56,7 +56,7 @@ export default function App() {
   }, []);
 
   useEffect(() => {
-    if (!supabase || !session) {
+    if (!client || !session) {
       setProfile(null);
       setMemberships([]);
       setLoading(false);
