@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState, type FormEvent, type ReactNode } from 'react';
 import {
   ArrowRight, Bell, BusFront, CheckCircle2, ClipboardList, GraduationCap,
-  LogOut, QrCode, ShieldCheck, Users,
+  Eye, EyeOff, LogOut, QrCode, ShieldCheck, Users,
 } from 'lucide-react';
 import type { Session } from '@supabase/supabase-js';
 import { isSupabaseConfigured, supabase } from './lib/supabase';
@@ -29,6 +29,7 @@ export default function App() {
   const [schoolId, setSchoolId] = useState('');
   const [phone, setPhone] = useState('');
   const [password, setPassword] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
   const [newPassword, setNewPassword] = useState('');
   const [busy, setBusy] = useState(false);
   const [loading, setLoading] = useState(true);
@@ -147,7 +148,7 @@ export default function App() {
   if (loading) return <main className="auth-shell"><Brand /><div className="loading-card">Loading your secure school workspace…</div></main>;
 
   if (!session) {
-    return <main className="auth-shell"><Brand /><section className="auth-card"><div className="auth-icon"><QrCode size={25} /></div><p className="eyebrow">WELCOME TO TAGIN</p><h1>Sign in to your school account.</h1><p className="muted">Enter your phone number as usual (for example, 08012345678) and the password provided by your school.</p><form className="auth-form" onSubmit={signIn}><label htmlFor="phone">Phone number</label><input id="phone" type="tel" autoComplete="tel" placeholder="08012345678" inputMode="tel" value={phone} onChange={(event) => setPhone(event.target.value)} required /><label htmlFor="password">Password</label><input id="password" type="password" autoComplete="current-password" placeholder="Enter your password" value={password} onChange={(event) => setPassword(event.target.value)} required />{error && <p className="form-error" role="alert">{error}</p>}<button className="primary-button" type="submit" disabled={busy}>{busy ? 'Signing in…' : 'Sign in'} <ArrowRight size={17} /></button></form></section><p className="security-note"><ShieldCheck size={14} /> Your school data is protected by role-based access controls.</p></main>;
+    return <main className="auth-shell"><Brand /><section className="auth-card"><div className="auth-icon"><QrCode size={25} /></div><p className="eyebrow">WELCOME TO TAGIN</p><h1>Sign in to your school account.</h1><p className="muted">Enter your phone number as usual (for example, 08012345678) and the password provided by your school.</p><form className="auth-form" onSubmit={signIn}><label htmlFor="phone">Phone number</label><input id="phone" type="tel" autoComplete="tel" placeholder="08012345678" inputMode="tel" value={phone} onChange={(event) => setPhone(event.target.value)} required /><label htmlFor="password">Password</label><div className="password-field"><input id="password" type={showPassword ? "text" : "password"} autoComplete="current-password" placeholder="Enter your password" value={password} onChange={(event) => setPassword(event.target.value)} required /><button className="password-toggle" type="button" onClick={() => setShowPassword((visible) => !visible)} aria-label={showPassword ? "Hide password" : "Show password"} aria-pressed={showPassword}>{showPassword ? <EyeOff size={18} /> : <Eye size={18} />}<span>{showPassword ? "Hide" : "Show"}</span></button></div>{error && <p className="form-error" role="alert">{error}</p>}<button className="primary-button" type="submit" disabled={busy}>{busy ? 'Signing in…' : 'Sign in'} <ArrowRight size={17} /></button></form></section><p className="security-note"><ShieldCheck size={14} /> Your school data is protected by role-based access controls.</p></main>;
   }
   if (profile?.must_change_password) {
     return <main className="auth-shell"><Brand /><section className="auth-card"><div className="auth-icon"><ShieldCheck size={25} /></div><p className="eyebrow">SECURITY CHECK</p><h1>Create your new password.</h1><p className="muted">For your protection, change the temporary password before continuing.</p><form className="auth-form" onSubmit={changePassword}><label htmlFor="new-password">New password</label><input id="new-password" type="password" autoComplete="new-password" minLength={12} placeholder="At least 12 characters" value={newPassword} onChange={(event) => setNewPassword(event.target.value)} required />{error && <p className="form-error" role="alert">{error}</p>}<button className="primary-button" type="submit" disabled={busy}>{busy ? 'Updating…' : 'Update password'} <ArrowRight size={17} /></button></form></section></main>;
