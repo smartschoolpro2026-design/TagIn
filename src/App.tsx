@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState, type FormEvent } from 'react';
+import { useEffect, useMemo, useState, type FormEvent, type ReactNode } from 'react';
 import { ArrowRight, Bell, BusFront, CheckCircle2, GraduationCap, LogOut, QrCode, ShieldCheck, Users } from 'lucide-react';
 import type { Session } from '@supabase/supabase-js';
 import { isSupabaseConfigured, supabase } from './lib/supabase';
@@ -242,6 +242,6 @@ function Brand() {
   return <a className="brand" href="#top"><span className="brand-mark"><QrCode size={20} /></span><span>TagIn</span></a>;
 }
 
-function WorkspaceCard({ icon, title, description }: { icon: React.ReactNode; title: string; description: string }) {
+function WorkspaceCard({ icon, title, description }: { icon: ReactNode; title: string; description: string }) {
   return <article className="workspace-card"><div className="workspace-card-icon">{icon}</div><h3>{title}</h3><p>{description}</p><span className="coming-soon">FOUNDATION READY</span></article>;
 }
