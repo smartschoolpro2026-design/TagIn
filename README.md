@@ -13,10 +13,12 @@ A multi-school student arrival, departure, and transport coordination platform.
 1. Install Node.js 20 or later.
 2. Run `npm install`.
 3. Copy `.env.example` to `.env.local`.
-4. Set `VITE_SUPABASE_URL` and `VITE_SUPABASE_ANON_KEY` using the project's public browser credentials.
+4. Confirm the two public Supabase values in `.env.local`.
 5. Run `npm run dev`.
 
-Never put a Supabase service-role key in a browser environment or commit secrets. `.env.local` is ignored by Git.
+The frontend signs in using a confirmed phone number and password. Phone/password sign-in must be enabled in Supabase Auth. Accounts are provisioned by a trusted administrator workflow; never expose the Supabase service-role key in the browser.
+
+Never commit secrets. `.env.local` is ignored by Git.
 
 ## Available scripts
 
@@ -27,4 +29,4 @@ Never put a Supabase service-role key in a browser environment or commit secrets
 
 ## Project status
 
-The initial frontend foundation is in place. Authentication flows, role-specific dashboards, QR scanning, notifications, and bus workflows will be implemented in subsequent steps after the database schema and authorization rules are verified.
+The frontend foundation and first phone/password authentication flow are in place. The authenticated workspace reads the signed-in user's profile and active school memberships under RLS. Role-specific operational screens, QR scanning, bus workflows, and parent notifications will follow in subsequent stages.
