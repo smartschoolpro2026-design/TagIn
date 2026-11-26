@@ -1,0 +1,18 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "tagin",
+  "compatibility_date": "2026-11-26",
+  "workers_dev": true,
+  "preview_urls": true,
+  "observability": {
+    "enabled": true
+  },
+  "vars": {
+    "SUPABASE_URL": "https://wlkqsivehfwogdquodxx.supabase.co",
+    "SUPABASE_PUBLISHABLE_KEY": "sb_publishable_yVimCHXGHJdSinXgiVbHjw_ZmsXpQ6T"
+  },
+  "assets": {
+    "directory": "./dist",
+    "not_found_handling": "single-page-application"
+  }
+}
