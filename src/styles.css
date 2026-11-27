@@ -408,3 +408,41 @@
 .attendance-scanner-modal .attendance-pickup-verify{width:min(100%,620px);max-height:100%;overflow:auto;margin:0;background:#fff;color:#24382e;box-shadow:0 18px 55px #0006}
 .attendance-scanner-modal .attendance-pickup-details{color:#24382e}
 @media(max-width:600px){.attendance-scanner-only{gap:12px;padding:12px}.attendance-scanner-top{align-items:flex-start}.attendance-scanner-top p:last-child{max-width:220px;font-size:11px}.attendance-scanner-exit{min-height:39px;padding:0 10px;font-size:12px}.attendance-scanner-stage{min-height:calc(100dvh - 115px);border-radius:14px}.attendance-scanner-stage .attendance-camera-frame{width:100%;height:calc(100dvh - 125px);min-height:260px}.attendance-scanner-toast{top:10px;left:10px;right:10px;padding:12px}.attendance-scanner-modal{padding:10px}.attendance-scanner-modal .attendance-pickup-verify{flex-direction:column;gap:10px}.attendance-scanner-modal .attendance-pickup-photo{width:88px;height:88px;flex-basis:88px}}
+
+
+.student-bulk-qr-panel{display:flex;align-items:center;justify-content:space-between;gap:18px;margin:22px 0;padding:20px;border:1px solid #dce8df;border-radius:16px;background:#f7faf7}
+.student-bulk-qr-panel h2{margin:4px 0 6px;color:#173f32;font-size:18px}
+.student-bulk-qr-panel .muted{margin:0;font-size:13px}
+.student-bulk-qr-controls{display:flex;align-items:center;gap:10px;min-width:min(100%,420px)}
+.student-bulk-qr-controls select{flex:1;min-width:140px}
+.student-bulk-qr-controls button{white-space:nowrap}
+.tagin-bulk-qr-overlay{align-items:start;overflow:auto;padding:16px}
+.tagin-bulk-qr-panel{width:min(1080px,100%);max-height:calc(100dvh - 32px);overflow:auto;padding:22px;border-radius:18px;background:#fff}
+.tagin-bulk-qr-heading{position:relative;display:flex;justify-content:space-between;align-items:flex-start;padding:0 52px 18px 0;border-bottom:1px solid #e5ece7}
+.tagin-bulk-qr-heading h2{margin:5px 0;color:#153f32;font-size:22px}
+.tagin-bulk-qr-heading p:last-child{margin:0;color:#65786e;font-size:13px}
+.tagin-bulk-qr-heading .tagin-qr-close{right:0;top:0}
+.tagin-bulk-qr-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:14px;padding:18px 0}
+.tagin-bulk-qr-card{display:flex;flex-direction:column;align-items:center;min-width:0;padding:16px 12px;border:1px solid #dce6df;border-radius:12px;text-align:center;break-inside:avoid;page-break-inside:avoid;color:#183e32}
+.tagin-bulk-brand{margin:0 0 7px;font-weight:800;letter-spacing:.02em}
+.tagin-bulk-qr-card h3{margin:0;font-size:16px;overflow-wrap:anywhere}
+.tagin-bulk-class{margin:4px 0 8px;color:#64786e;font-size:12px}
+.tagin-bulk-qr-image{display:flex;align-items:center;justify-content:center;width:180px;height:180px;max-width:100%;padding:4px}
+.tagin-bulk-qr-image img,.tagin-bulk-qr-image canvas{display:block;max-width:100%;height:auto!important}
+.tagin-bulk-school{margin:7px 0 3px;font-size:12px;font-weight:700}
+.tagin-bulk-qr-card small{color:#6d7d74;font-size:10px}
+.tagin-bulk-qr-actions{padding-top:10px}
+@media(max-width:760px){.student-bulk-qr-panel{align-items:stretch;flex-direction:column}.student-bulk-qr-controls{width:100%;min-width:0}.tagin-bulk-qr-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.tagin-bulk-qr-panel{padding:16px}}
+@media(max-width:420px){.student-bulk-qr-controls{align-items:stretch;flex-direction:column}.tagin-bulk-qr-controls button{width:100%;justify-content:center}.tagin-bulk-qr-grid{grid-template-columns:1fr}}
+@media print{
+  body *{visibility:hidden!important}
+  .tagin-bulk-qr-overlay,.tagin-bulk-qr-overlay *{visibility:visible!important}
+  .tagin-bulk-qr-overlay{position:absolute!important;inset:0!important;display:block!important;overflow:visible!important;padding:0!important;background:#fff!important}
+  .tagin-bulk-qr-panel{width:100%!important;max-height:none!important;overflow:visible!important;padding:0!important;border-radius:0!important}
+  .tagin-bulk-qr-heading{padding:0 0 10px!important}
+  .tagin-bulk-qr-heading .tagin-qr-close,.tagin-bulk-qr-actions{display:none!important}
+  .tagin-bulk-qr-grid{grid-template-columns:repeat(3,minmax(0,1fr))!important;gap:8px!important;padding:10px 0!important}
+  .tagin-bulk-qr-card{border:1px solid #b9c8bf!important;padding:10px 6px!important;break-inside:avoid!important;page-break-inside:avoid!important}
+  .tagin-bulk-qr-image{width:150px!important;height:150px!important}
+  @page{size:A4 portrait;margin:10mm}
+}
