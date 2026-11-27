@@ -1,6 +1,6 @@
 import { useEffect,useMemo,useState } from 'react';
 import type { SupabaseClient } from '@supabase/supabase-js';
-import { Award,Bell,BookOpen,BusFront,CalendarDays,ChevronDown,GraduationCap,HeartHandshake,School,ShieldCheck } from 'lucide-react';
+import { Award,Bell,BusFront,CalendarDays,ChevronDown,GraduationCap,HeartHandshake,School,ShieldCheck } from 'lucide-react';
 
 type Child={id:string;full_name:string;class_name:string|null;level:string|null;school:string;schoolId:string};
 type Props={client:SupabaseClient;userId:string;parentName:string;onOpen:(view:'scores-parent'|'timetable-parent'|'family')=>void};
