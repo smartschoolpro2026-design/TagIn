@@ -81,3 +81,5 @@
 
 
 .advanced-document-form{padding-bottom:15px;border-bottom:1px solid #edf1ec}.advanced-document-list{display:grid;gap:8px;margin-top:13px}.advanced-document-item{padding:11px;border:1px solid #e8eee7;border-radius:9px;background:#fbfcfa}.advanced-document-item strong,.advanced-document-item span{display:block}.advanced-document-item strong{color:#345445;font-size:12px}.advanced-document-item span{margin-top:3px;color:#829087;font-size:10px;text-transform:capitalize}.advanced-document-item small{display:inline-block;margin:7px 10px 0 0;color:#7d8d82;font-size:10px}.advanced-document-item p{margin:7px 0 0;color:#617468;font-size:11px}.advanced-doc-disclaimer{margin:10px 0 0;color:#8b968e;font-size:10px}
+
+.advanced-document-form input[type=file]{height:auto;padding:8px;background:#fff}.advanced-document-form label>small{display:block;margin-top:5px;color:#819087;font-size:10px;font-weight:500}.advanced-document-open{margin-top:9px;padding:7px 10px;border:1px solid #cfe1d1;border-radius:7px;background:#edf6ee;color:#2f6d49;font-size:11px;font-weight:700}
