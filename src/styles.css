@@ -160,3 +160,18 @@
 .public-brand{letter-spacing:0;font-size:0}
 .public-brand-logo{display:block;width:142px;height:auto;object-fit:contain}
 @media(max-width:700px){.auth-shell>.brand .brand-logo{width:min(215px,72vw)}.workspace-topbar .brand-logo{width:128px}.public-brand-logo{width:125px}}
+
+/* In-app QR attendance scanner */
+.attendance-scan-card{display:flex;flex-direction:column;gap:16px;margin:0 0 22px;padding:20px;border:1px solid #dce9e0;border-radius:20px;background:linear-gradient(135deg,#f4faf5,#fff);box-shadow:0 8px 24px rgba(19,63,48,.06)}
+.attendance-scan-copy{display:flex;align-items:center;gap:14px}
+.attendance-scan-icon{width:48px;height:48px;flex:0 0 48px;display:grid;place-items:center;border-radius:15px;background:#dcefe3;color:#14513d}
+.attendance-scan-copy h2{margin:0 0 5px;color:#173d32;font-size:18px}
+.attendance-scan-copy p{margin:0;color:#687b72;font-size:13px;line-height:1.55}
+.attendance-scan-button,.attendance-scan-close{align-self:flex-start;display:inline-flex;align-items:center;justify-content:center;gap:9px;min-height:46px;padding:0 18px;border:0;border-radius:12px;background:#174c3b;color:#fff;font-weight:700;cursor:pointer}
+.attendance-scan-close{background:#e8efea;color:#244d3d}
+.attendance-camera-frame{position:relative;overflow:hidden;width:100%;max-width:520px;aspect-ratio:4/3;margin:0 auto;border-radius:18px;background:#081a14}
+.attendance-camera-frame video{width:100%;height:100%;object-fit:cover}
+.attendance-camera-guide{position:absolute;inset:15%;display:grid;place-items:center;border:2px solid rgba(255,255,255,.9);border-radius:18px;box-shadow:0 0 0 999px rgba(0,0,0,.18);pointer-events:none}
+.attendance-camera-guide span{width:100%;height:1px;background:rgba(53,229,145,.85);box-shadow:0 0 12px #35e591}
+.attendance-camera-frame p{position:absolute;left:12px;right:12px;bottom:8px;margin:0;text-align:center;color:white;font-size:12px;text-shadow:0 1px 4px #000}
+@media(max-width:600px){.attendance-scan-card{padding:16px;border-radius:16px}.attendance-scan-button,.attendance-scan-close{width:100%}.attendance-scan-copy h2{font-size:16px}}
