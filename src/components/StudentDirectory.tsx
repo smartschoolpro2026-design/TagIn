@@ -36,7 +36,7 @@ export function StudentDirectory({ client, schoolId, schoolName, userId, onBack,
   const [newClassLevel, setNewClassLevel] = useState('');
   const [qrStudent, setQrStudent] = useState<Student | null>(null);
   const [qrToken, setQrToken] = useState('');
-  const [bulkClassId, setBulkClassId] = useState('');
+  const [selectedClassId, setSelectedClassId] = useState('');
   const [bulkQrStudents, setBulkQrStudents] = useState<BulkQrStudent[]>([]);
 
   async function loadRegister() {
@@ -58,10 +58,15 @@ export function StudentDirectory({ client, schoolId, schoolName, userId, onBack,
   }
   useEffect(() => { void loadRegister(); }, [client, schoolId]);
 
+  const selectedClass = classes.find(item => item.id === selectedClassId) ?? null;
+  const classStudents = useMemo(() => {
+    if (!selectedClassId) return [];
+    return students.filter(student => student.class_id === selectedClassId || (!student.class_id && student.class_name === selectedClass?.class_name && (student.level ?? '') === (selectedClass?.level ?? '')));
+  }, [students, selectedClassId, selectedClass]);
   const filteredStudents = useMemo(() => {
     const term = search.trim().toLowerCase();
-    if (!term) return students;
-    return students.filter(student => {
+    if (!term) return classStudents;
+    return classStudents.filter(student => {
       const assignedClass = classes.find(item => item.id === student.class_id);
       const assignedTeacher = teacherName(assignedClass?.teacher_membership_id ?? null).toLowerCase();
       return [student.full_name, student.class_name ?? '', student.level ?? '', assignedTeacher].some(value => value.toLowerCase().includes(term));
@@ -164,10 +169,8 @@ export function StudentDirectory({ client, schoolId, schoolName, userId, onBack,
   }
 
   async function issueClassQrPasses() {
-    if (!bulkClassId || busy) return;
-    const selectedClass = classes.find(item => item.id === bulkClassId);
-    if (!selectedClass) return;
-    const roster = students.filter(item => item.active && (item.class_id === bulkClassId || (!item.class_id && item.class_name === selectedClass.class_name && (item.level ?? '') === selectedClass.level)));
+    if (!selectedClassId || busy || !selectedClass) return;
+    const roster = classStudents.filter(item => item.active);
     if (!roster.length) { setError('There are no active students in this class to generate QR passes for.'); return; }
     setBusy(true); setError(''); setNotice(''); setBulkQrStudents([]);
     try {
@@ -226,9 +229,20 @@ export function StudentDirectory({ client, schoolId, schoolName, userId, onBack,
       <button className="primary-button add-student-button" type="button" onClick={openNewStudent}><Plus size={17}/> Add student</button>
     </div>
 
-    <section className="student-bulk-qr-panel"><div><p className="eyebrow">STUDENT QR CARDS</p><h2>Generate QR passes for a whole class</h2><p className="muted">Issue a unique bag-tag QR code for every active student in a selected class.</p></div><div className="student-bulk-qr-controls"><select aria-label="Select class for QR generation" value={bulkClassId} onChange={event => setBulkClassId(event.target.value)}><option value="">Select a class</option>{classes.map(item => <option key={item.id} value={item.id}>{item.class_name}{item.level ? ' · ' + item.level : ''}</option>)}</select><button className="primary-button" type="button" disabled={busy || !bulkClassId || !students.some(item => item.active && item.class_id === bulkClassId)} onClick={() => void issueClassQrPasses()}><QrCode size={16}/>{busy ? 'Generating…' : 'Generate class QR passes'}</button></div></section>
+    <section className="student-bulk-qr-panel student-class-overview">
+      <div><p className="eyebrow">CLASS REGISTER</p><h2>{selectedClass ? selectedClass.class_name + (selectedClass.level ? " · " + selectedClass.level : "") : "Choose a class"}</h2><p className="muted">{selectedClass ? "Showing only students assigned to this class." : "Select a class to view its students, teacher and QR card options."}</p></div>
+      <div className="student-bulk-qr-controls">
+        <label className="student-class-select-label" htmlFor="student-register-class">Select class</label>
+        <select id="student-register-class" aria-label="Select class to view student register" value={selectedClassId} onChange={event => {setSelectedClassId(event.target.value);setSearch("");setError("");setNotice("");setBulkQrStudents([]);}}><option value="">Choose a class</option>{classes.map(item => <option key={item.id} value={item.id}>{item.class_name}{item.level ? " · " + item.level : ""}</option>)}</select>
+        <button className="primary-button" type="button" disabled={busy || !selectedClassId || activeCount === 0} onClick={() => void issueClassQrPasses()}><QrCode size={16}/>{busy ? "Generating…" : "Generate class QR cards"}</button>
+      </div>
+    </section>
 
-    <div className="student-summary"><div><span className="student-summary-icon"><Users size={19}/></span><strong>{students.length}</strong><span>Total students</span></div><div><span className="student-summary-icon"><UserRound size={19}/></span><strong>{activeCount}</strong><span>Active students</span></div><div><span className="student-summary-icon"><BookOpen size={19}/></span><strong>{classes.length}</strong><span>Classes in this school</span></div></div>
+    {selectedClass ? <div className="student-summary student-class-summary">
+      <div><span className="student-summary-icon"><Users size={19}/></span><strong>{classStudents.length}</strong><span>Students in {selectedClass.class_name}</span></div>
+      <div><span className="student-summary-icon"><UserRound size={19}/></span><strong>{activeCount}</strong><span>Active students</span></div>
+      <div><span className="student-summary-icon"><BookOpen size={19}/></span><strong>{inactiveCount}</strong><span>Inactive students</span></div>
+    </div> : <div className="student-empty student-class-prompt">Select a class above. The student totals, teacher and student list will update to that class only.</div>}
 
     {showForm && <form className="student-form" onSubmit={saveStudent}>
       <div className="student-form-heading"><div><p className="eyebrow">{editing ? 'UPDATE STUDENT' : 'NEW STUDENT'}</p><h2>{editing ? 'Edit student details' : 'Add a student'}</h2><p>Complete the student details and assignments here. You do not need to visit another page.</p></div><button className="student-row-action" type="button" onClick={resetForm} aria-label="Close student form"><X size={17}/></button></div>
@@ -240,14 +254,14 @@ export function StudentDirectory({ client, schoolId, schoolName, userId, onBack,
     </form>}
 
     {error && <p className="form-error" role="alert">{error}</p>}{notice && <p className="student-notice" role="status">{notice}</p>}
-    <div className="student-list-panel"><div className="student-list-heading"><div><h2>Student register</h2><p>Each student is shown with their current class and responsible teacher.</p></div><span>{filteredStudents.length} shown</span></div>
+    {selectedClass && <div className="student-list-panel"><div className="student-list-heading"><div><h2>{selectedClass.class_name} student register</h2><p>Class teacher: {teacherName(selectedClass.teacher_membership_id)}</p></div><span>{filteredStudents.length} shown</span></div>
       <label className="student-search"><Search size={17}/><input value={search} onChange={event => setSearch(event.target.value)} placeholder="Search student, class or teacher"/></label>
-      {loading ? <div className="student-empty">Loading student register…</div> : filteredStudents.length === 0 ? <div className="student-empty">{students.length === 0 ? 'No students have been registered yet. Add the first student to begin.' : 'No students match your search.'}</div> : <div className="student-table-wrap"><table className="student-table"><thead><tr><th>Student</th><th>Class</th><th>Class teacher</th><th>Status</th><th>QR code</th><th>Action</th></tr></thead><tbody>
+      {loading ? <div className="student-empty">Loading student register…</div> : filteredStudents.length === 0 ? <div className="student-empty">{classStudents.length === 0 ? 'No students have been assigned to this class yet. Add a student and select this class.' : 'No students match your search.'}</div> : <div className="student-table-wrap"><table className="student-table"><thead><tr><th>Student</th><th>Class</th><th>Class teacher</th><th>Status</th><th>QR code</th><th>Action</th></tr></thead><tbody>
         {filteredStudents.map(student => {const assignedClass = classes.find(item => item.id === student.class_id);return <tr key={student.id}><td><strong>{student.full_name}</strong><span className="student-id">Student record</span></td><td>{student.class_name || assignedClass?.class_name || '—'}{student.level || assignedClass?.level ? <span className="student-id">{student.level || assignedClass?.level}</span> : null}</td><td>{teacherName(assignedClass?.teacher_membership_id ?? null)}</td><td><span className={student.active ? 'student-status active' : 'student-status inactive'}>{student.active ? 'Active' : 'Inactive'}</span></td><td><button className="student-row-action student-qr-action" type="button" disabled={busy || !student.active} onClick={() => void issueStudentQr(student)}><QrCode size={14}/> {student.active ? 'Issue QR' : 'Unavailable'}</button></td><td><div className="student-row-actions"><button className="student-row-action" type="button" disabled={busy} onClick={() => openEditStudent(student)}><Pencil size={14}/> Edit</button><button className="student-row-action" type="button" disabled={busy} onClick={() => void toggleStudent(student)}>{student.active ? 'Deactivate' : 'Reactivate'}</button></div></td></tr>;})}
       </tbody></table></div>}
-    </div>
+    </div>}
     <p className="student-footnote">Student records are retained when marked inactive. Attendance history is not deleted. Class and teacher assignments can be updated from this page.</p>
-    {bulkQrStudents.length > 0 && <BulkStudentQrCards schoolName={schoolName} classLabel={classes.find(item => item.id === bulkClassId)?.class_name ?? 'Class'} students={bulkQrStudents} onClose={() => setBulkQrStudents([])}/>}
+    {bulkQrStudents.length > 0 && <BulkStudentQrCards schoolName={schoolName} classLabel={selectedClass?.class_name ?? 'Class'} students={bulkQrStudents} onClose={() => setBulkQrStudents([])}/>}
     {qrStudent && qrToken && <StudentQrCard studentName={qrStudent.full_name} className={qrStudent.class_name} token={qrToken} onClose={() => {setQrStudent(null);setQrToken('');}}/>}
   </section>;
 }
