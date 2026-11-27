@@ -96,7 +96,7 @@ export function AttendanceWorkspace({client,schoolId,schoolName,actorName,canChe
   const collectorName=asParent?parentCollectorName.trim():String(pending.collector_name||'').trim();
   if(!collectorName){setError(asParent?'Enter the parent or guardian’s name.':'The authorised pickup name is missing.');return;}
   setPickupBusy(true);setError('');setNotice('');
-  const {data,error:e}=await client.rpc('record_student_checkout',{
+  const {error:e}=await client.rpc('record_student_checkout',{
    p_school_id:schoolId,p_student_id:pending.id,
    p_collected_by_type:asParent?'parent':'authorised_pickup',
    p_collected_by_name:collectorName,
