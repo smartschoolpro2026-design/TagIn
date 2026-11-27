@@ -15,6 +15,7 @@ import { TimetableWorkspace } from './components/TimetableWorkspace';
 import { ScoresWorkspace } from './components/ScoresWorkspace';
 import { PublicLandingPage } from './components/PublicLandingPage';
 import { ParentDashboard } from './components/ParentDashboard';
+import { ActivityAuditWorkspace } from './components/ActivityAuditWorkspace';
 
 type Profile = {
   full_name: string;
@@ -48,7 +49,7 @@ export default function App() {
   const [showSignIn, setShowSignIn] = useState(false);
   const [error, setError] = useState('');
   const [showSchoolManagement, setShowSchoolManagement] = useState(false);
-  const [activeWorkspace, setActiveWorkspace] = useState<'students' | 'attendance' | 'staff' | 'families' | 'family' | 'transport-admin' | 'transport-driver' | 'timetable-admin' | 'timetable-teacher' | 'timetable-parent' | 'scores-admin' | 'scores-teacher' | 'scores-parent' | 'students-advanced' | 'attendance-scan' | ''>('');
+  const [activeWorkspace, setActiveWorkspace] = useState<'students' | 'attendance' | 'staff' | 'families' | 'family' | 'transport-admin' | 'transport-driver' | 'timetable-admin' | 'timetable-teacher' | 'timetable-parent' | 'scores-admin' | 'scores-teacher' | 'scores-parent' | 'students-advanced' | 'attendance-scan' | 'activity-audit' | ''>('');
   const [schools, setSchools] = useState<School[]>([]);
   const [schoolNameInput, setSchoolNameInput] = useState('');
   const [schoolSlugInput, setSchoolSlugInput] = useState('');
@@ -353,6 +354,8 @@ export default function App() {
     <header className="workspace-topbar"><Brand /><div className="account-actions">{(canCheckIn || canCheckOut) && activeWorkspace === '' && <button className="icon-button qr-header-button" type="button" onClick={() => setActiveWorkspace('attendance-scan')} aria-label="Scan student QR code" title="Scan student QR code"><svg className="tagin-scan-icon" viewBox="0 0 64 64" width="25" height="25" fill="none" aria-hidden="true"><path d="M8 20V11a3 3 0 0 1 3-3h9M44 8h9a3 3 0 0 1 3 3v9M56 44v9a3 3 0 0 1-3 3h-9M20 56h-9a3 3 0 0 1-3-3v-9M21 25h22v5M21 39h22v-5M8 32h48" stroke="currentColor" strokeWidth="3.8" strokeLinecap="round" strokeLinejoin="round"/></svg></button>}{!isSchoolAdmin && !isParent && <span className="user-chip">{profile.full_name}</span>}<button className="icon-button" onClick={signOut} disabled={busy} aria-label="Sign out"><LogOut size={18} /></button></div></header>
     {activeWorkspace === '' && isParent && session ? (
       <ParentDashboard client={client!} userId={session.user.id} parentName={profile.full_name} onOpen={(view) => setActiveWorkspace(view)} />
+    ) : activeWorkspace === 'activity-audit' && session && (isPlatformAdmin || isSchoolAdmin) ? (
+      <ActivityAuditWorkspace client={client!} session={session} platformAdmin={isPlatformAdmin} schoolId={isPlatformAdmin ? undefined : selectedMembership?.school_id} schoolName={schoolName} onBack={() => setActiveWorkspace('')} />
     ) : activeWorkspace === 'scores-admin' && isSchoolAdmin && selectedMembership ? (
       <ScoresWorkspace client={client!} schoolId={selectedMembership.school_id} schoolName={schoolName} mode="admin" userId={session?.user.id} onBack={() => setActiveWorkspace('')} />
     ) : activeWorkspace === 'scores-teacher' && selectedMembership?.role === 'staff' ? (
@@ -407,6 +410,7 @@ export default function App() {
           {isUnifiedStaff && <WorkspaceCard icon={<ClipboardList />} title="My teaching timetable" description="View the lessons assigned to your teacher account." actionLabel="View timetable" onAction={() => setActiveWorkspace('timetable-teacher')} />}
           {isSchoolAdmin && <WorkspaceCard icon={<BusFront />} title="Transport management" description="Manage school vehicles, routes, stops, drivers and student allocations." actionLabel="Manage transport" onAction={() => setActiveWorkspace('transport-admin')} />}
           {selectedMembership?.role === 'bus_staff' && <WorkspaceCard icon={<BusFront />} title="My transport journeys" description="View your assigned routes and record student pickup and drop-off." actionLabel="Open driver workspace" onAction={() => setActiveWorkspace('transport-driver')} />}
+          {(isPlatformAdmin || isSchoolAdmin) && <WorkspaceCard icon={<ShieldCheck />} title="Activity & Audit Centre" description={isPlatformAdmin ? "Investigate actions and record changes across every registered school." : "Review who changed records and who performed school activities."} actionLabel="View activity logs" onAction={() => setActiveWorkspace('activity-audit')} />}
           {(isPlatformAdmin || isSchoolAdmin) && <WorkspaceCard icon={<ClipboardList />} title="Reports and overview" description="Review attendance, school activity, and operational reports." />}
           {isParent && (selectedMembership?.role === 'parent' || guardianSchoolIds.length > 0) && <WorkspaceCard icon={<Award />} title="Children's results" description="View published assessment scores and teacher remarks for your linked children." actionLabel="View results" onAction={() => setActiveWorkspace('scores-parent')} />}
           {isParent && (selectedMembership?.role === 'parent' || guardianSchoolIds.length > 0) && <WorkspaceCard icon={<CalendarDays />} title="Children's timetable" description="View the weekly class schedule for your linked children." actionLabel="View timetable" onAction={() => setActiveWorkspace('timetable-parent')} />}
