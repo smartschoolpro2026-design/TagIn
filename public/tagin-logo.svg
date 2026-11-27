@@ -1,0 +1,11 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 760 190" role="img" aria-labelledby="title desc">
+<title id="title">TagIn</title><desc id="desc">TagIn school identity and secure check-in logo</desc>
+<g transform="translate(18 18)">
+<path d="M48 8H24A16 16 0 0 0 8 24v24M144 8h24a16 16 0 0 1 16 16v24M184 144v24a16 16 0 0 1-16 16h-24M48 184H24A16 16 0 0 1 8 168v-24" fill="none" stroke="#14543B" stroke-width="12" stroke-linecap="round"/>
+<circle cx="96" cy="64" r="25" fill="#14543B"/>
+<path d="M50 137c4-27 20-42 46-42 14 0 26 5 34 14l-13 35H50z" fill="#14543B"/>
+<circle cx="143" cy="133" r="31" fill="#10A65A" stroke="#fff" stroke-width="5"/>
+<path d="m128 133 10 10 21-23" fill="none" stroke="#fff" stroke-width="8" stroke-linecap="round" stroke-linejoin="round"/>
+</g>
+<text x="230" y="135" font-family="Arial, Helvetica, sans-serif" font-size="112" font-weight="800" letter-spacing="-6" fill="#123F30">Tag<tspan fill="#10A65A">I</tspan>n</text>
+</svg>
