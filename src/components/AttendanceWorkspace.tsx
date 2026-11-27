@@ -11,6 +11,7 @@ export function AttendanceWorkspace({client,schoolId,schoolName,actorName,canChe
  const [students,setStudents]=useState<Student[]>([]),[recent,setRecent]=useState<Event[]>([]),[selected,setSelected]=useState<Student|null>(null),[latest,setLatest]=useState<Event|null>(null);
  const [collector,setCollector]=useState(''),[search,setSearch]=useState(''),[loading,setLoading]=useState(true),[checking,setChecking]=useState(false),[busy,setBusy]=useState(false),[error,setError]=useState(''),[notice,setNotice]=useState('');
  const [scanActive,setScanActive]=useState(startInScanMode),[cameraError,setCameraError]=useState('');
+ const [pendingPickup,setPendingPickup]=useState<any|null>(null),[pickupBusy,setPickupBusy]=useState(false);
  const videoRef=useRef<HTMLVideoElement|null>(null);
  useEffect(()=>{
   if(!scanActive)return;
