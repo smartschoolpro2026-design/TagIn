@@ -40,6 +40,10 @@ export default function App() {
   const [schoolNameInput, setSchoolNameInput] = useState('');
   const [schoolSlugInput, setSchoolSlugInput] = useState('');
   const [schoolAddressInput, setSchoolAddressInput] = useState('');
+  const [adminSchoolId, setAdminSchoolId] = useState('');
+  const [adminFullName, setAdminFullName] = useState('');
+  const [adminPhone, setAdminPhone] = useState('');
+  const [createdAdmin, setCreatedAdmin] = useState<{ fullName: string; phone: string; temporaryPassword: string } | null>(null);
 
   useEffect(() => {
     if (!client) { setLoading(false); return; }
@@ -201,6 +205,26 @@ export default function App() {
     setBusy(false);
   }
 
+  async function createSchoolAdmin(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    if (!client || profile?.platform_role !== 'super_admin' || !adminSchoolId) return;
+    setBusy(true); setError(''); setCreatedAdmin(null);
+    const { data, error: invokeError } = await client.functions.invoke('create-school-admin', {
+      body: { schoolId: adminSchoolId, fullName: adminFullName.trim(), phone: adminPhone.trim() },
+    });
+    if (invokeError || !data?.success || !data?.temporaryPassword) {
+      setError(data?.error || invokeError?.message || 'Could not create this school administrator. Please try again.');
+    } else {
+      setCreatedAdmin({
+        fullName: data.administrator.fullName,
+        phone: data.administrator.phone,
+        temporaryPassword: data.temporaryPassword,
+      });
+      setAdminFullName(''); setAdminPhone('');
+    }
+    setBusy(false);
+  }
+
   async function toggleSchoolStatus(school: School) {
     if (!client || profile?.platform_role !== 'super_admin') return;
     setBusy(true); setError('');
@@ -247,7 +271,7 @@ export default function App() {
         {error && <p className="form-error" role="alert">{error}</p>}
         <form className="school-create-form" onSubmit={createSchool}><h3>Create a school</h3><label htmlFor="school-name">School name</label><input id="school-name" value={schoolNameInput} onChange={(event) => setSchoolNameInput(event.target.value)} placeholder="e.g. Greenfield Academy" required minLength={2} maxLength={160} /><label htmlFor="school-slug">School URL slug</label><input id="school-slug" value={schoolSlugInput} onChange={(event) => setSchoolSlugInput(event.target.value)} placeholder="greenfield-academy" pattern="[a-z0-9]+(-[a-z0-9]+)*" required /><label htmlFor="school-address">Address (optional)</label><input id="school-address" value={schoolAddressInput} onChange={(event) => setSchoolAddressInput(event.target.value)} placeholder="School address" /><button className="primary-button" type="submit" disabled={busy}>{busy ? 'Saving…' : 'Create school'} <ArrowRight size={17} /></button></form>
         <div className="school-list-heading"><h3>Registered schools</h3><span>{schools.length} total</span></div>
-        {schools.length === 0 ? <p className="empty-state">No schools have been created yet.</p> : <div className="school-list">{schools.map((school) => <article className="school-row" key={school.id}><div><strong>{school.name}</strong><span>/{school.slug}{school.address ? ` · ${school.address}` : ''}</span></div><div className="school-row-actions"><span className={`status-pill ${school.status}`}>{school.status}</span><button className="secondary-button" type="button" disabled={busy} onClick={() => void toggleSchoolStatus(school)}>{school.status === 'active' ? 'Suspend' : 'Reactivate'}</button></div></article>)}</div>}
+        {schools.length === 0 ? <p className="empty-state">No schools have been created yet.</p> : <div className="school-list">{schools.map((school) => <article className="school-entry" key={school.id}><div className="school-row"><div><strong>{school.name}</strong><span>/{school.slug}{school.address ? ` · ${school.address}` : ''}</span></div><div className="school-row-actions"><span className={`status-pill ${school.status}`}>{school.status}</span><button className="secondary-button" type="button" disabled={busy} onClick={() => void toggleSchoolStatus(school)}>{school.status === 'active' ? 'Suspend' : 'Reactivate'}</button>{school.status === 'active' && <button className="secondary-button" type="button" disabled={busy} onClick={() => { setAdminSchoolId(adminSchoolId === school.id ? '' : school.id); setCreatedAdmin(null); setError(''); }}>{adminSchoolId === school.id ? 'Close' : 'Assign admin'}</button>}</div></div>{adminSchoolId === school.id && <form className="school-create-form school-admin-form" onSubmit={createSchoolAdmin}><h3>Assign school administrator</h3><p className="muted">Create a secure login for {school.name}. The administrator will change the temporary password at first sign-in.</p><label htmlFor={`admin-name-${school.id}`}>Administrator full name</label><input id={`admin-name-${school.id}`} value={adminFullName} onChange={(event) => setAdminFullName(event.target.value)} placeholder="Full name" required minLength={2} maxLength={160} /><label htmlFor={`admin-phone-${school.id}`}>Phone number</label><input id={`admin-phone-${school.id}`} type="tel" inputMode="tel" value={adminPhone} onChange={(event) => setAdminPhone(event.target.value)} placeholder="08012345678 or +2348012345678" required /><button className="primary-button" type="submit" disabled={busy}>{busy ? 'Creating account…' : 'Create school administrator'} <ArrowRight size={17} /></button>{createdAdmin && <div className="code-note"><strong>Administrator account created</strong><br />Name: {createdAdmin.fullName}<br />Phone: {createdAdmin.phone}<br />Temporary password: <strong>{createdAdmin.temporaryPassword}</strong><br /><span>Share this password privately. It will not be shown again after you leave this screen.</span></div>}</form>}</article>)}</div>}
       </section>
     ) : (
       <>
