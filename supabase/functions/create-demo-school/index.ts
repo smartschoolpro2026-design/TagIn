@@ -146,19 +146,13 @@ Deno.serve(async (req: Request) => {
         student = updated.data;
       }
       students.push({ ...student, ...spec });
-      const { data: secret } = await admin.schema("private").from("student_qr_secrets").select("student_id,token_hash").eq("student_id", student.id).maybeSingle();
-      if (!secret) {
-        const bytes = crypto.getRandomValues(new Uint8Array(32));
-        const token = btoa(String.fromCharCode(...bytes)).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/g, "");
-        const tokenHash = await hash(token);
-        const reference = "TG-" + crypto.randomUUID().replaceAll("-", "").slice(0, 10).toUpperCase();
-        const { error: tagError } = await admin.from("tags").insert({ school_id: schoolId, student_id: student.id, token_hash: tokenHash, tag_type: "bag", status: "active" });
-        if (tagError) throw new Error("Could not create a QR tag for " + spec.name);
-        const { error: secretError } = await admin.schema("private").from("student_qr_secrets").insert({
-          student_id: student.id, school_id: schoolId, token, token_hash: tokenHash, reference_code: reference,
-        });
-        if (secretError) throw new Error("Could not save the secure QR credential for " + spec.name);
-      }
+      const bytes = crypto.getRandomValues(new Uint8Array(32));
+      const token = btoa(String.fromCharCode(...bytes)).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/g, "");
+      const tokenHash = await hash(token);
+      const { error: qrError } = await admin.rpc("seed_demo_student_qr", {
+        p_student_id: student.id, p_school_id: schoolId, p_token: token, p_token_hash: tokenHash,
+      });
+      if (qrError) throw new Error("Could not create the secure QR credential for " + spec.name + ": " + qrError.message);
       const guardian = people[spec.parent];
       const guardianName = guardian.name;
       const { data: guardianRow, error: guardianError } = await admin.from("guardians").upsert({
