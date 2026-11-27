@@ -44,7 +44,6 @@ export function TransportWorkspace({ client, schoolId, schoolName, mode, members
   const [studentId, setStudentId] = useState('');
   const [pickupStopId, setPickupStopId] = useState('');
   const [dropoffStopId, setDropoffStopId] = useState('');
-  const [note, setNote] = useState('');
 
   async function loadAdmin() {
     const [v, r, s, d, st, e] = await Promise.all([
@@ -135,14 +134,6 @@ export function TransportWorkspace({ client, schoolId, schoolName, mode, members
     else { setStudentId(''); setPickupStopId(''); setDropoffStopId(''); setNotice('Student assigned to this route.'); await loadAssignments(selectedRoute); }
     setBusy(false);
   }
-  async function recordEvent(eventType: 'picked_up' | 'dropped_off' | 'missed' | 'incident', student: RouteStudent) {
-    setBusy(true); setError(''); setNotice('');
-    const { error: err } = await client.rpc('record_transport_event', { p_school_id: schoolId, p_route_id: selectedRoute, p_student_id: student.student_id, p_event_type: eventType, p_stop_id: eventType === 'picked_up' ? student.pickup_stop_id : eventType === 'dropped_off' ? student.dropoff_stop_id : null, p_note: note.trim() || null });
-    if (err) setError(err.message.includes('already recorded') || err.message.includes('must be picked') ? err.message : 'The journey update could not be saved. Check your route assignment and connection.');
-    else { setNote(''); setNotice('Journey update saved securely.'); await loadAssignments(selectedRoute); }
-    setBusy(false);
-  }
-
   async function resolveDriverQr(rawValue: string) {
     setCameraError(''); setError(''); setNotice('');
     let token = rawValue.trim();
