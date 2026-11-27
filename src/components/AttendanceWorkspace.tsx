@@ -1,6 +1,6 @@
 import { useEffect,useMemo,useRef,useState } from 'react';
 import type { SupabaseClient } from '@supabase/supabase-js';
-import { ArrowLeft,Camera,CheckCircle2,LogIn,LogOut,Search,ShieldCheck,UserRound,X } from 'lucide-react';
+import { ArrowLeft,BusFront,Camera,CheckCircle2,LogIn,LogOut,Search,ShieldCheck,UserRound,X } from 'lucide-react';
 type Student={id:string;full_name:string;class_name:string|null;level:string|null};
 type Event={id:string;student_id:string;event_type:'check_in'|'check_out';created_at:string;collected_by_name:string|null;scanned_by:string};
 type Props={client:SupabaseClient;schoolId:string;schoolName:string;actorName:string;canCheckIn:boolean;canCheckOut:boolean;onBack:()=>void;startInScanMode?:boolean};
@@ -13,6 +13,7 @@ export function AttendanceWorkspace({client,schoolId,schoolName,actorName,canChe
  const [scanActive,setScanActive]=useState(startInScanMode),[cameraError,setCameraError]=useState('');
  const [pendingPickup,setPendingPickup]=useState<any|null>(null),[pickupBusy,setPickupBusy]=useState(false);
  const [pendingStudentRelease,setPendingStudentRelease]=useState<any|null>(null),[parentCollectorName,setParentCollectorName]=useState('');
+ const [pendingBusDeparture,setPendingBusDeparture]=useState<any|null>(null);
  const videoRef=useRef<HTMLVideoElement|null>(null);
  const scannerOnly=startInScanMode;
  useEffect(()=>{
@@ -98,6 +99,17 @@ export function AttendanceWorkspace({client,schoolId,schoolName,actorName,canChe
     const arrivalLabel=busArrival ? 'Arrived by school bus'+(routeName?' · '+routeName:'') : 'No bus drop-off recorded · verify independent arrival';
     setSelected(verifiedStudent);setLatest(checkInEvent as Event);setNotice(verifiedStudent.full_name+' checked in successfully. '+arrivalLabel+'.');await refreshRecent();return;
    }
+   const {data:busAssignments,error:busAssignmentError}=await client.from('transport_route_students')
+    .select('route_id,transport_routes(name)')
+    .eq('school_id',schoolId).eq('student_id',verifiedStudent.id).eq('active',true).limit(1);
+   if(busAssignmentError){setCameraError('The student bus assignment could not be verified. Please try again.');return;}
+   if(busAssignments?.length){
+    const busAssignment=busAssignments[0] as any;
+    setSelected(verifiedStudent);setLatest(latestEvent as Event);setParentCollectorName('');
+    setPendingBusDeparture({...verifiedStudent,routeId:busAssignment.route_id,routeName:busAssignment.transport_routes?.name||'Assigned school bus'});
+    setNotice('Choose how '+verifiedStudent.full_name+' is leaving school.');
+    return;
+   }
    const {data:pickupData,error:pickupLookupError}=await client.rpc('preview_student_pickup',{p_school_id:schoolId,p_student_id:verifiedStudent.id});
    if(pickupLookupError){setCameraError(pickupLookupError.message||'Pickup authorisation could not be loaded.');return;}
    let photoUrl='';
@@ -114,6 +126,36 @@ export function AttendanceWorkspace({client,schoolId,schoolName,actorName,canChe
   }
  }
 
+ async function confirmBusDeparture(){
+  const pending=pendingBusDeparture;if(!pending||pickupBusy)return;
+  setPickupBusy(true);setError('');setNotice('');
+  const {data,error:e}=await client.rpc('record_attendance_event',{
+   p_school_id:schoolId,p_student_id:pending.id,p_event_type:'check_out',
+   p_collected_by_name:'School bus - '+pending.routeName
+  });
+  if(e){setError(e.message||'School bus departure could not be recorded.');}
+  else{
+   setPendingBusDeparture(null);setLatest(data as Event);
+   setNotice(pending.full_name+' has checked out for '+pending.routeName+'. The driver or assistant must scan again to confirm boarding.');
+   await refreshRecent();
+  }
+  setPickupBusy(false);
+ }
+ async function continueParentPickup(){
+  const pending=pendingBusDeparture;if(!pending||pickupBusy)return;
+  setPickupBusy(true);setError('');setNotice('');
+  const {data:pickupData,error:pickupLookupError}=await client.rpc('preview_student_pickup',{p_school_id:schoolId,p_student_id:pending.id});
+  if(pickupLookupError){setError(pickupLookupError.message||'Pickup authorisation could not be loaded.');setPickupBusy(false);return;}
+  let photoUrl='';
+  if(pickupData?.has_authorized_collector&&pickupData.photo_path){
+   const {data:signed}=await client.storage.from('tagin-pickup-photos').createSignedUrl(pickupData.photo_path,300);
+   photoUrl=signed?.signedUrl??'';
+  }
+  setPendingBusDeparture(null);setParentCollectorName('');
+  setPendingStudentRelease({...pending,...pickupData,photoUrl});
+  setNotice('Verify the parent or authorised pickup person before releasing the student.');
+  setPickupBusy(false);
+ }
  async function confirmStudentRelease(asParent:boolean){
   const pending=pendingStudentRelease;
   if(!pending||pickupBusy)return;
@@ -162,6 +204,7 @@ export function AttendanceWorkspace({client,schoolId,schoolName,actorName,canChe
    {scanActive?<div className="attendance-camera-frame"><video ref={videoRef} autoPlay muted playsInline/><div className="attendance-camera-guide"><span/></div><p>Position the student’s QR code inside the frame.</p></div>:<div className="attendance-scanner-paused"><Camera size={38}/><strong>{notice||cameraError?'Scan result':'Camera paused'}</strong><p>{notice||cameraError||'Ready for the next student.'}</p><button className="attendance-scan-button" type="button" onClick={()=>{setNotice('');setCameraError('');setScanActive(true);}}><Camera size={18}/> Scan next student</button></div>}
    {cameraError&&<div className="attendance-scanner-toast error" role="alert"><strong>Unable to complete scan</strong><span>{cameraError}</span></div>}
    {notice&&!cameraError&&<div className="attendance-scanner-toast success" role="status"><CheckCircle2 size={22}/><div><strong>{notice}</strong><span>{selected?.class_name||selected?.level||'Attendance updated'}</span></div></div>}
+   {pendingBusDeparture&&<div className="attendance-scanner-modal"><div className="attendance-pickup-verify"><div className="attendance-pickup-photo"><BusFront size={28}/></div><div className="attendance-pickup-details"><p className="eyebrow">SCHOOL DEPARTURE</p><h3>{pendingBusDeparture.full_name}</h3><p>Assigned route: <strong>{pendingBusDeparture.routeName}</strong></p><p>Confirm the departure method. For a bus departure, gate checkout happens now and the driver or assistant scans again when the student boards.</p><button className="attendance-checkout" type="button" disabled={pickupBusy} onClick={()=>void confirmBusDeparture()}>{pickupBusy?'Recording departure…':'Check out for school bus'}</button><button className="attendance-checkin" type="button" disabled={pickupBusy} onClick={()=>void continueParentPickup()}>Parent / authorised pickup instead</button><button className="attendance-scan-close" type="button" disabled={pickupBusy} onClick={()=>{setPendingBusDeparture(null);setNotice('');setScanActive(true);}}>Cancel / scan again</button></div></div></div>}
    {pendingStudentRelease&&<div className="attendance-scanner-modal"><div className="attendance-pickup-verify">
     <div className="attendance-pickup-photo">{pendingStudentRelease.photoUrl?<img src={pendingStudentRelease.photoUrl} alt={pendingStudentRelease.collector_name}/>:<UserRound size={28}/>}</div>
     <div className="attendance-pickup-details"><p className="eyebrow">STUDENT BAG TAG VERIFIED</p><h3>{pendingStudentRelease.full_name}</h3>
@@ -181,6 +224,7 @@ export function AttendanceWorkspace({client,schoolId,schoolName,actorName,canChe
    {!scanActive?<button className="attendance-scan-button" type="button" onClick={()=>{setCameraError('');setScanActive(true);}}><Camera size={18}/> Open QR scanner</button>:<button className="attendance-scan-close" type="button" onClick={()=>setScanActive(false)}><X size={17}/> Close scanner</button>}
    {scanActive&&<div className="attendance-camera-frame"><video ref={videoRef} autoPlay muted playsInline/><div className="attendance-camera-guide"><span/></div><p>Hold the student’s QR code inside the frame.</p></div>}
    {cameraError&&<p className="form-error" role="alert">{cameraError}</p>}
+  {pendingBusDeparture&&<div className="attendance-pickup-verify"><div className="attendance-pickup-photo"><BusFront size={28}/></div><div className="attendance-pickup-details"><p className="eyebrow">SCHOOL DEPARTURE</p><h3>{pendingBusDeparture.full_name}</h3><p>Assigned route: <strong>{pendingBusDeparture.routeName}</strong></p><p>Choose the correct departure method. Bus departure must be followed by a driver or assistant boarding scan.</p><button className="attendance-checkout" type="button" disabled={pickupBusy} onClick={()=>void confirmBusDeparture()}>{pickupBusy?'Recording departure…':'Check out for school bus'}</button><button className="attendance-checkin" type="button" disabled={pickupBusy} onClick={()=>void continueParentPickup()}>Parent / authorised pickup instead</button><button className="attendance-scan-close" type="button" disabled={pickupBusy} onClick={()=>setPendingBusDeparture(null)}>Cancel</button></div></div>}
   {pendingStudentRelease&&<div className="attendance-pickup-verify">
    <div className="attendance-pickup-photo">{pendingStudentRelease.photoUrl?<img src={pendingStudentRelease.photoUrl} alt={pendingStudentRelease.collector_name}/>:<UserRound size={28}/>}</div>
    <div className="attendance-pickup-details">
