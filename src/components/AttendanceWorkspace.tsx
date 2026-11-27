@@ -1,4 +1,4 @@
-import { useEffect,useMemo,useState } from 'react';
+import { useEffect,useMemo,useRef,useState } from 'react';
 import type { SupabaseClient } from '@supabase/supabase-js';
 import { ArrowLeft,Camera,CheckCircle2,LogIn,LogOut,Search,ShieldCheck,UserRound,X } from 'lucide-react';
 type Student={id:string;full_name:string;class_name:string|null;level:string|null};
