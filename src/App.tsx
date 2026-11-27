@@ -5,6 +5,7 @@ import {
 } from 'lucide-react';
 import type { Session } from '@supabase/supabase-js';
 import { isSupabaseConfigured, supabase } from './lib/supabase';
+import { StudentDirectory } from './components/StudentDirectory';
 
 type Profile = {
   full_name: string;
@@ -36,6 +37,7 @@ export default function App() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [showSchoolManagement, setShowSchoolManagement] = useState(false);
+  const [activeWorkspace, setActiveWorkspace] = useState<'students' | ''>('');
   const [schools, setSchools] = useState<School[]>([]);
   const [schoolNameInput, setSchoolNameInput] = useState('');
   const [schoolSlugInput, setSchoolSlugInput] = useState('');
@@ -265,7 +267,9 @@ export default function App() {
   const schoolName = selectedMembership?.schools?.name ?? (isPlatformAdmin ? 'All schools' : 'No active school');
   return <main className="workspace-shell">
     <header className="workspace-topbar"><Brand /><div className="account-actions">{!isSchoolAdmin && <span className="user-chip">{profile.full_name}</span>}<button className="icon-button" onClick={signOut} disabled={busy} aria-label="Sign out"><LogOut size={18} /></button></div></header>
-    {showSchoolManagement && isPlatformAdmin ? (
+    {activeWorkspace === 'students' && isSchoolAdmin && selectedMembership ? (
+      <StudentDirectory client={client!} schoolId={selectedMembership.school_id} schoolName={selectedMembership.schools?.name ?? 'Your school'} onBack={() => setActiveWorkspace('')} />
+    ) : showSchoolManagement && isPlatformAdmin ? (
       <section className="management-panel management-page">
         <div className="management-heading"><div><p className="eyebrow">PLATFORM ADMINISTRATION</p><h1>School management</h1><p className="muted">Create school workspaces and manage their access status.</p></div><button className="secondary-button" type="button" onClick={() => { setError(''); setShowSchoolManagement(false); }}>Back to dashboard</button></div>
         {error && <p className="form-error" role="alert">{error}</p>}
@@ -280,7 +284,7 @@ export default function App() {
         {error && <p className="form-error" role="alert">{error}</p>}
         <section className="workspace-section"><p className="eyebrow">YOUR WORKSPACE</p><h2>{isPlatformAdmin ? 'Platform overview' : 'School operations'}</h2><div className="workspace-grid">
           {isPlatformAdmin && <WorkspaceCard icon={<ShieldCheck />} title="School management" description="Create and manage school workspaces and administrators." actionLabel="Manage schools" onAction={() => { setError(''); setShowSchoolManagement(true); }} />}
-          {(isPlatformAdmin || isSchoolAdmin || (isUnifiedStaff && (hasStaffPermission('students.create') || hasStaffPermission('students.update') || hasStaffPermission('registers.manage')))) && <WorkspaceCard icon={<Users />} title={isUnifiedStaff ? 'Student registers' : 'People and students'} description={isUnifiedStaff ? 'Manage the student records and class registers assigned to you.' : 'Manage student records, families, and staff access.'} />}
+          {(isPlatformAdmin || isSchoolAdmin || (isUnifiedStaff && (hasStaffPermission('students.create') || hasStaffPermission('students.update') || hasStaffPermission('registers.manage')))) && <WorkspaceCard icon={<Users />} title={isUnifiedStaff ? 'Student registers' : 'People and students'} description={isUnifiedStaff ? 'Manage the student records and class registers assigned to you.' : 'Manage student records, families, and staff access.'} actionLabel="Manage students" onAction={isSchoolAdmin ? () => setActiveWorkspace('students') : undefined} />}
           {(isPlatformAdmin || isSchoolAdmin || (isUnifiedStaff && (hasStaffPermission('gate.scan') || hasStaffPermission('gate.check_in') || hasStaffPermission('gate.check_out'))) || selectedMembership?.role === 'gate_staff') && <WorkspaceCard icon={<QrCode />} title="Gate check-in" description="Scan student tags and record authorized arrival and departure activity." />}
           {(isPlatformAdmin || isSchoolAdmin || (isUnifiedStaff && (hasStaffPermission('transport.view_assigned') || hasStaffPermission('transport.board') || hasStaffPermission('transport.drop_off'))) || selectedMembership?.role === 'bus_staff') && <WorkspaceCard icon={<BusFront />} title="Transport" description="View assigned journeys and record student boarding and drop-off." />}
           {(isPlatformAdmin || isSchoolAdmin) && <WorkspaceCard icon={<ClipboardList />} title="Reports and overview" description="Review attendance, school activity, and operational reports." />}
