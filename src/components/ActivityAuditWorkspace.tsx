@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { ArrowLeft, Download, Filter, RefreshCw, Search, ShieldCheck } from 'lucide-react';
 import type { Session, SupabaseClient } from '@supabase/supabase-js';
+import { supabaseAnonKey, supabaseUrl } from '../lib/supabase';
 
 type AuditRow = {
   id: number;
@@ -164,10 +165,10 @@ export function ActivityAuditWorkspace({ client, session, schoolId, schoolName, 
     // verified report can be displayed.
     let passwordValid = false;
     try {
-      const verifyResponse = await fetch(`${client.supabaseUrl}/auth/v1/token?grant_type=password`, {
+      const verifyResponse = await fetch(`${supabaseUrl}/auth/v1/token?grant_type=password`, {
         method: 'POST',
         headers: {
-          apikey: client.supabaseKey,
+          apikey: supabaseAnonKey,
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({ email: session.user.email, password }),
