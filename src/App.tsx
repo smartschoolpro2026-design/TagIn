@@ -10,6 +10,7 @@ import { AttendanceWorkspace } from './components/AttendanceWorkspace';
 import { StaffWorkspace } from './components/StaffWorkspace';
 import { FamilyWorkspace } from './components/FamilyWorkspace';
 import { TransportWorkspace } from './components/TransportWorkspace';
+import { TimetableWorkspace } from './components/TimetableWorkspace';
 
 type Profile = {
   full_name: string;
@@ -42,7 +43,7 @@ export default function App() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [showSchoolManagement, setShowSchoolManagement] = useState(false);
-  const [activeWorkspace, setActiveWorkspace] = useState<'students' | 'attendance' | 'staff' | 'families' | 'family' | 'transport-admin' | 'transport-driver' | ''>('');
+  const [activeWorkspace, setActiveWorkspace] = useState<'students' | 'attendance' | 'staff' | 'families' | 'family' | 'transport-admin' | 'transport-driver' | 'timetable-admin' | 'timetable-teacher' | 'timetable-parent' | ''>('');
   const [schools, setSchools] = useState<School[]>([]);
   const [schoolNameInput, setSchoolNameInput] = useState('');
   const [schoolSlugInput, setSchoolSlugInput] = useState('');
@@ -279,7 +280,13 @@ export default function App() {
   const schoolName = selectedMembership?.schools?.name ?? (isPlatformAdmin ? 'All schools' : 'No active school');
   return <main className="workspace-shell">
     <header className="workspace-topbar"><Brand /><div className="account-actions">{!isSchoolAdmin && <span className="user-chip">{profile.full_name}</span>}<button className="icon-button" onClick={signOut} disabled={busy} aria-label="Sign out"><LogOut size={18} /></button></div></header>
-    {activeWorkspace === 'transport-admin' && isSchoolAdmin && selectedMembership ? (
+    {activeWorkspace === 'timetable-admin' && isSchoolAdmin && selectedMembership ? (
+      <TimetableWorkspace client={client!} schoolId={selectedMembership.school_id} schoolName={schoolName} mode="admin" userId={session?.user.id} onBack={() => setActiveWorkspace('')} />
+    ) : activeWorkspace === 'timetable-teacher' && selectedMembership?.role === 'staff' ? (
+      <TimetableWorkspace client={client!} schoolId={selectedMembership.school_id} schoolName={schoolName} mode="teacher" membershipId={selectedMembership.id} userId={session?.user.id} onBack={() => setActiveWorkspace('')} />
+    ) : activeWorkspace === 'timetable-parent' && isParent && session && (selectedMembership?.school_id || guardianSchoolIds[0]) ? (
+      <TimetableWorkspace client={client!} schoolId={selectedMembership?.school_id ?? guardianSchoolIds[0]} schoolName={selectedMembership?.schools?.name ?? 'Your school'} mode="parent" userId={session.user.id} onBack={() => setActiveWorkspace('')} />
+    ) :     {activeWorkspace === 'transport-admin' && isSchoolAdmin && selectedMembership ? (
       <TransportWorkspace client={client!} schoolId={selectedMembership.school_id} schoolName={schoolName} mode="admin" onBack={() => setActiveWorkspace('')} />
     ) : activeWorkspace === 'transport-driver' && selectedMembership?.role === 'bus_staff' ? (
       <TransportWorkspace client={client!} schoolId={selectedMembership.school_id} schoolName={schoolName} mode="driver" membershipId={selectedMembership.id} onBack={() => setActiveWorkspace('')} />
@@ -312,9 +319,12 @@ export default function App() {
           {isSchoolAdmin && <WorkspaceCard icon={<Users />} title="Staff management" description="Create teacher and gate staff accounts, manage access and review staff permissions." actionLabel="Manage staff" onAction={() => setActiveWorkspace('staff')} />}
           {isSchoolAdmin && <WorkspaceCard icon={<HeartHandshake />} title="Parents and guardians" description="Create parent logins and securely link each family to its student records." actionLabel="Manage families" onAction={() => setActiveWorkspace('families')} />}
           {(isSchoolAdmin || isUnifiedStaff && (hasStaffPermission('gate.scan') || hasStaffPermission('gate.check_in') || hasStaffPermission('gate.check_out')) || selectedMembership?.role === 'gate_staff') && <WorkspaceCard icon={<QrCode />} title="Gate check-in" description="Search students and record school arrival and departure with staff attribution." actionLabel="Open attendance" onAction={() => setActiveWorkspace('attendance')} />}
+          {isSchoolAdmin && <WorkspaceCard icon={<ClipboardList />} title="Timetable management" description="Create weekly class schedules, assign teachers and organise lesson times." actionLabel="Manage timetable" onAction={() => setActiveWorkspace('timetable-admin')} />}
+          {isUnifiedStaff && <WorkspaceCard icon={<ClipboardList />} title="My teaching timetable" description="View the lessons assigned to your teacher account." actionLabel="View timetable" onAction={() => setActiveWorkspace('timetable-teacher')} />}
           {isSchoolAdmin && <WorkspaceCard icon={<BusFront />} title="Transport management" description="Manage school vehicles, routes, stops, drivers and student allocations." actionLabel="Manage transport" onAction={() => setActiveWorkspace('transport-admin')} />}
           {selectedMembership?.role === 'bus_staff' && <WorkspaceCard icon={<BusFront />} title="My transport journeys" description="View your assigned routes and record student pickup and drop-off." actionLabel="Open driver workspace" onAction={() => setActiveWorkspace('transport-driver')} />}
           {(isPlatformAdmin || isSchoolAdmin) && <WorkspaceCard icon={<ClipboardList />} title="Reports and overview" description="Review attendance, school activity, and operational reports." />}
+          {isParent && (selectedMembership?.role === 'parent' || guardianSchoolIds.length > 0) && <WorkspaceCard icon={<CalendarDays />} title="Children's timetable" description="View the weekly class schedule for your linked children." actionLabel="View timetable" onAction={() => setActiveWorkspace('timetable-parent')} />}
           {isParent && <WorkspaceCard icon={<Bell />} title="Family updates" description="View your linked children's school arrival, departure, and attendance notifications." actionLabel="Open family portal" onAction={() => setActiveWorkspace('family')} />}
           {!isPlatformAdmin && !selectedMembership && !isParent && <WorkspaceCard icon={<ShieldCheck />} title="No school assigned" description="Your account is active, but no active school membership was found. Contact your administrator." />}
         </div></section>
