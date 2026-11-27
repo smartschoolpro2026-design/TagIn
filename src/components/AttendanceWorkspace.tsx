@@ -88,7 +88,15 @@ export function AttendanceWorkspace({client,schoolId,schoolName,actorName,canChe
    if(latestEvent?.event_type!=='check_in'){
     const {data:checkInEvent,error:checkInError}=await client.rpc('record_attendance_event',{p_school_id:schoolId,p_student_id:verifiedStudent.id,p_event_type:'check_in',p_collected_by_name:null});
     if(checkInError){const m=checkInError.message??'';setCameraError(m.includes('already checked in')?'This student is already checked in.':m.includes('not permitted')?'Your account is not permitted to check students in.':'Check-in could not be recorded. Please try again.');return;}
-    setSelected(verifiedStudent);setLatest(checkInEvent as Event);setNotice(verifiedStudent.full_name+' has been checked in successfully.');await refreshRecent();return;
+    const dayStart = new Date(); dayStart.setHours(0,0,0,0);
+    const {data:busArrival}=await client.from('transport_events')
+     .select('created_at,transport_routes(name)')
+     .eq('school_id',schoolId).eq('student_id',verifiedStudent.id)
+     .eq('event_type','arrived_at_school').gte('created_at',dayStart.toISOString())
+     .order('created_at',{ascending:false}).limit(1).maybeSingle();
+    const routeName=(busArrival as any)?.transport_routes?.name;
+    const arrivalLabel=busArrival ? 'Arrived by school bus'+(routeName?' · '+routeName:'') : 'No bus drop-off recorded · verify independent arrival';
+    setSelected(verifiedStudent);setLatest(checkInEvent as Event);setNotice(verifiedStudent.full_name+' checked in successfully. '+arrivalLabel+'.');await refreshRecent();return;
    }
    const {data:pickupData,error:pickupLookupError}=await client.rpc('preview_student_pickup',{p_school_id:schoolId,p_student_id:verifiedStudent.id});
    if(pickupLookupError){setCameraError(pickupLookupError.message||'Pickup authorisation could not be loaded.');return;}
