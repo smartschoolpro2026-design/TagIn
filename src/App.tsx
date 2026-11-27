@@ -261,7 +261,7 @@ export default function App() {
   const isUnifiedStaff = selectedMembership?.role === 'staff';
   const hasStaffPermission = (permission: string) => staffPermissions.includes(permission);
   const canCheckIn = Boolean(selectedMembership && (isSchoolAdmin || selectedMembership.role === 'gate_staff' || (isUnifiedStaff && (hasStaffPermission('gate.scan') || hasStaffPermission('gate.check_in')))));
-  const canCheckOut = Boolean(selectedMembership && (isSchoolAdmin || selectedMembership.role === 'gate_staff' || (isUnifiedStaff && (hasStaffPermission('gate.scan') || hasStaffPermission('gate.check_out'))));
+  const canCheckOut = Boolean(selectedMembership && (isSchoolAdmin || selectedMembership.role === 'gate_staff' || (isUnifiedStaff && (hasStaffPermission('gate.scan') || hasStaffPermission('gate.check_out')))));
   const role = isPlatformAdmin
     ? 'Platform administrator'
     : isUnifiedStaff
