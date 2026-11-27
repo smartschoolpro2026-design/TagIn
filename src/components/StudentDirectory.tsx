@@ -36,6 +36,7 @@ export function StudentDirectory({ client, schoolId, schoolName, userId, onBack,
   const [newClassLevel, setNewClassLevel] = useState('');
   const [qrStudent, setQrStudent] = useState<Student | null>(null);
   const [qrToken, setQrToken] = useState('');
+  const [qrReference, setQrReference] = useState('');
   const [selectedClassId, setSelectedClassId] = useState('');
   const [bulkQrStudents, setBulkQrStudents] = useState<BulkQrStudent[]>([]);
 
@@ -185,9 +186,10 @@ export function StudentDirectory({ client, schoolId, schoolName, userId, onBack,
           p_student_id: student.id, p_token: candidateToken, p_token_hash: candidateHash
         });
         if (error || typeof data?.token !== 'string') throw new Error('A secure QR pass could not be prepared for ' + student.full_name + '.');
-        return { student, token: data.token as string };
+        if (typeof data?.reference_code !== 'string') throw new Error('An anonymous student reference could not be prepared.');
+        return { student, token: data.token as string, referenceCode: data.reference_code as string };
       }));
-      setBulkQrStudents(issued.map(item => ({ id: item.student.id, full_name: item.student.full_name, class_name: item.student.class_name ?? selectedClass.class_name, level: item.student.level ?? selectedClass.level, token: item.token })));
+      setBulkQrStudents(issued.map(item => ({ id: item.student.id, full_name: item.student.full_name, class_name: item.student.class_name ?? selectedClass.class_name, level: item.student.level ?? selectedClass.level, token: item.token, reference_code: item.referenceCode })));
       setNotice('The class QR cards are ready. Existing student references were kept unchanged.');
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Class QR passes could not be generated.');
@@ -197,7 +199,7 @@ export function StudentDirectory({ client, schoolId, schoolName, userId, onBack,
   async function issueStudentQr(student: Student) {
     if (!student.active || busy) return;
     if (!window.confirm('Replace this student’s QR reference? The old QR will stop working, and the new QR will be shared with the parent dashboard.')) return;
-    setBusy(true); setError(''); setNotice(''); setQrStudent(null); setQrToken('');
+    setBusy(true); setError(''); setNotice(''); setQrStudent(null); setQrToken(''); setQrReference('');
     try {
       const bytes = crypto.getRandomValues(new Uint8Array(32));
       const token = btoa(String.fromCharCode(...bytes)).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/g, '');
@@ -207,7 +209,8 @@ export function StudentDirectory({ client, schoolId, schoolName, userId, onBack,
         p_student_id: student.id, p_token: token, p_token_hash: tokenHash
       });
       if (replaceError || typeof data?.token !== 'string') throw new Error(replaceError?.message || 'The student QR tag could not be replaced. Check administrator access and try again.');
-      setQrStudent(student); setQrToken(data.token);
+      if (typeof data.reference_code !== 'string') throw new Error('The anonymous student reference could not be prepared.');
+      setQrStudent(student); setQrToken(data.token); setQrReference(data.reference_code);
       setNotice('The student QR reference has been replaced. All older codes are now revoked.');
     } catch (e) {
       setError(e instanceof Error ? e.message : 'The student QR code could not be issued.');
@@ -253,6 +256,6 @@ export function StudentDirectory({ client, schoolId, schoolName, userId, onBack,
     </div>}
     <p className="student-footnote">Student records are retained when marked inactive. Attendance history is not deleted. Class and teacher assignments can be updated from this page.</p>
     {bulkQrStudents.length > 0 && <BulkStudentQrCards schoolName={schoolName} classLabel={selectedClass?.class_name ?? 'Class'} students={bulkQrStudents} onClose={() => setBulkQrStudents([])}/>}
-    {qrStudent && qrToken && <StudentQrCard studentName={qrStudent.full_name} className={qrStudent.class_name} token={qrToken} onClose={() => {setQrStudent(null);setQrToken('');}}/>}
+    {qrStudent && qrToken && <StudentQrCard referenceCode={qrReference} token={qrToken} onClose={() => {setQrStudent(null);setQrToken('');}}/>}
   </section>;
 }
