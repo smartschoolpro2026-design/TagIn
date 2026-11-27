@@ -36,15 +36,30 @@ function friendlyEntity(value:string) {
  const map:Record<string,string>={tags:'QR tag',students:'student record',guardians:'parent/guardian record',student_guardians:'parent–student link',school_memberships:'staff or user access',profiles:'user profile',staff_profiles:'staff profile',staff_permissions:'staff permissions',scan_events:'attendance record',authorized_collectors:'pickup authorisation',schools:'school record',assessment_scores:'student result',assessments:'assessment',timetable_entries:'timetable',transport_events:'transport update',notifications:'notification'};
  return map[value]??value.replaceAll('_',' ');
 }
-function describe(row:AuditRow, students:Record<string,{name:string;className:string}>, tagStudents:Record<string,string>) {
- const action=row.action.toLowerCase(), child=studentFor(row,students,tagStudents)?.name;
- if(action==='tags.update' && (row.metadata?.after as Record<string,unknown>|undefined)?.status==='revoked') return child ? 'Revoked '+child+"'s QR tag" : 'Revoked a QR tag';
- if(action==='tags.insert') return child ? 'Issued a QR tag for '+child : 'Issued a QR tag';
- if(action==='parent.linked') {const m=row.metadata??{};return 'Linked '+String(m.parent_name??'a parent')+' to '+String(m.student_name??'a student');}
- if(action==='activity.exported') return 'Downloaded an activity report';
- if(action==='auth.login_failed') return 'Failed login attempt'; if(action==='auth.login_blocked') return 'Blocked login attempt'; if(action==='auth.login') return 'Signed in to TagIn'; if(action==='auth.logout') return 'Signed out of TagIn';
- const op=action.split('.').pop()??'updated'; const verbs:Record<string,string>={insert:'created',update:'updated',delete:'deleted',created:'created',updated:'updated',deleted:'deleted',linked:'linked',export_failed:'failed to download'};
- return (verbs[op]??op)+' '+friendlyEntity(row.entity_type);
+function activityTitle(row:AuditRow) {
+ const action=row.action.toLowerCase();
+ const titles:Record<string,string>={
+  'students.insert':'Student created','students.update':'Student updated','students.delete':'Student deleted',
+  'guardians.insert':'Parent account created','guardians.update':'Parent details updated','guardians.delete':'Parent record deleted',
+  'student_guardians.insert':'Parent linked to student','student_guardians.delete':'Parent unlinked from student',
+  'parent.linked':'Parent account created and linked','profiles.insert':'Login created','profiles.update':'Login details updated',
+  'school_memberships.insert':'Login access created','school_memberships.update':'Login access updated','school_memberships.delete':'Login access removed',
+  'scan_events.insert':'Student checked in/out','tags.insert':'QR tag issued','tags.update':'QR tag updated',
+  'activity.exported':'Activity report exported','activity.export_failed':'Activity report export failed',
+  'auth.login':'Login','auth.logout':'Logout','auth.login_failed':'Failed login','auth.login_blocked':'Login blocked'
+ };
+ if(action==='tags.update' && (row.metadata?.after as Record<string,unknown>|undefined)?.status==='revoked') return 'QR tag revoked';
+ const op=action.split('.').pop();
+ return titles[action] ?? (op==='insert'?'Record created':op==='update'?'Record updated':op==='delete'?'Record deleted':label(row.action));
+}
+function personFor(row:AuditRow, students:Record<string,{name:string;className:string}>, tagStudents:Record<string,string>) {
+ const child=studentFor(row,students,tagStudents);
+ if(child) return child.name;
+ const m=row.metadata??{};
+ const after=(m.after&&typeof m.after==='object'?m.after:{}) as Record<string,unknown>;
+ const before=(m.before&&typeof m.before==='object'?m.before:{}) as Record<string,unknown>;
+ for(const value of [m.parent_name,m.student_name,after.full_name,before.full_name,after.name,before.name,m.attempted_name]) if(typeof value==='string'&&value.trim()) return value;
+ return friendlyEntity(row.entity_type);
 }
 function changedSummary(row:AuditRow) {
  const m=row.metadata??{}; const fields=Array.isArray(m.changed_fields)?m.changed_fields.filter(x=>typeof x==='string'&&x!=='id'&&x!=='student_id'):[];
@@ -199,11 +214,11 @@ export function ActivityAuditWorkspace({ client, session, schoolId, schoolName, 
       setExporting(false);
       return;
     }
-    const headers = ['Date and time','School','Person','Activity','Student','Class','What changed','Details'];
+    const headers = ['Date and time','School','Person','Activity','Performed by','Class','What changed','Details'];
     const lines = filtered.map(row => [
       new Date(row.created_at).toLocaleString(), row.school_id ? schools[row.school_id] ?? 'School' : 'Platform',
       row.actor_user_id ? actors[row.actor_user_id] ?? 'Account name unavailable' : (typeof row.metadata?.attempted_name === 'string' ? 'Failed sign-in attempt for ' + row.metadata.attempted_name : 'System / automated action'),
-      describe(row, students, tagStudents), studentFor(row, students, tagStudents)?.name ?? '', studentFor(row, students, tagStudents)?.className ?? '', changedSummary(row), safeDetails(row, students, tagStudents),
+      personFor(row, students, tagStudents), activityTitle(row), row.actor_user_id ? actors[row.actor_user_id] ?? 'Name not available' : (row.metadata?.historical_unattributed ? 'Creator not recorded' : 'System / automated action'), studentFor(row, students, tagStudents)?.className ?? '', changedSummary(row), safeDetails(row, students, tagStudents),
     ].map(csvCell).join(','));
     const csv = '\uFEFF' + [headers.map(csvCell).join(','), ...lines].join('\r\n');
     const filename = 'tagin-activity-audit-' + new Date().toISOString().slice(0,10) + '.csv';
@@ -233,7 +248,7 @@ export function ActivityAuditWorkspace({ client, session, schoolId, schoolName, 
     {error && <p className="form-error" role="alert">{error}</p>}{notice && <p className="student-notice" role="status">{notice}</p>}{pendingCsv && <div className="audit-download-ready"><Download size={18}/><div><strong>Your report is ready</strong><p>Choose how to save the CSV file on your phone. It can be opened with Excel or Google Sheets.</p><div className="audit-download-actions"><button className="primary-button" type="button" onClick={openCsvReport}>Open / save report</button><button className="secondary-button" type="button" onClick={()=>void shareCsvReport()}>Share / save file</button></div></div></div>}
     <div className="audit-list">
       {loading ? <p className="audit-empty">Loading activity records…</p> : filtered.length === 0 ? <p className="audit-empty">No activity matches these filters.</p> : filtered.map(row=><article className="audit-row" key={row.id}>
-        <div className="audit-row-main"><span className="audit-action-icon"><Filter size={16}/></span><div className="audit-row-copy"><strong>{describe(row, students, tagStudents)}</strong><span>{row.actor_user_id ? actors[row.actor_user_id] ?? 'Account name unavailable' : (typeof row.metadata?.attempted_name === 'string' ? 'Failed sign-in attempt · ' + row.metadata.attempted_name : 'System / automated action')} · {row.school_id ? schools[row.school_id] ?? 'School' : 'Platform'}</span><small>{studentFor(row, students, tagStudents) ? studentFor(row, students, tagStudents)!.name + (studentFor(row, students, tagStudents)!.className ? ' · ' + studentFor(row, students, tagStudents)!.className : '') : friendlyEntity(row.entity_type)}</small></div></div>
+        <div className="audit-row-main"><span className="audit-action-icon"><Filter size={16}/></span><div className="audit-row-copy"><strong>{activityTitle(row)}</strong><span><b>Person:</b> {personFor(row, students, tagStudents)}</span><small><b>Performed by:</b> {row.actor_user_id ? actors[row.actor_user_id] ?? 'Name not available' : (row.metadata?.historical_unattributed ? 'Creator not recorded' : typeof row.metadata?.attempted_name === 'string' ? row.metadata.attempted_name : 'System / automated action')} · {row.school_id ? schools[row.school_id] ?? 'School' : 'Platform'}</small></div></div>
         <time>{new Date(row.created_at).toLocaleString([], {dateStyle:'medium',timeStyle:'short'})}</time>
         {row.metadata && Object.keys(row.metadata).length>0 && <details className="audit-details"><summary>View details</summary><div className="audit-human-details"><strong>{changedSummary(row)}</strong><p>{safeDetails(row, students, tagStudents)}</p></div></details>}
       </article>)}
