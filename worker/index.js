@@ -55,7 +55,7 @@ export default {
             "x-client-info": "tagin-cloudflare-login-proxy/1.0",
           },
           body,
-          redirect: "error",
+          redirect: "follow",
         });
         const headers = new Headers();
         headers.set("Content-Type", upstream.headers.get("Content-Type") || "application/json");
