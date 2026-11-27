@@ -39,9 +39,21 @@ export default {
       }
 
       try {
+        const publishableKey = env.SUPABASE_PUBLISHABLE_KEY;
+        if (!publishableKey) {
+          return Response.json({ error: "Authentication service is not configured" }, {
+            status: 503,
+            headers: { "Cache-Control": "no-store" },
+          });
+        }
+
         const upstream = await fetch(upstreamUrl, {
           method: "POST",
-          headers: { "Content-Type": "application/json" },
+          headers: {
+            "Content-Type": "application/json",
+            "apikey": publishableKey,
+            "x-client-info": "tagin-cloudflare-login-proxy/1.0",
+          },
           body,
           redirect: "error",
         });
