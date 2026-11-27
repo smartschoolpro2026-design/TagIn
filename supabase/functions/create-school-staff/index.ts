@@ -16,7 +16,7 @@ Deno.serve(async(req:Request)=>{
  const {data:actor,error:actorError}=await admin.from("profiles").select("is_active").eq("id",auth.user.id).maybeSingle();
  if(actorError||!actor||actor.is_active!==true)return response(403,{error:"An active school administrator account is required."});
  let body:{schoolId?:unknown;fullName?:unknown;phone?:unknown;role?:unknown;jobTitle?:unknown;department?:unknown};try{body=await req.json();}catch{return response(400,{error:"Invalid request."});}
- const schoolId=typeof body.schoolId==="string"?body.schoolId:"",fullName=typeof body.fullName==="string"?body.fullName.trim():"",phone=normalizePhone(body.phone),role=body.role==="gate_staff"?"gate_staff":body.role==="teacher"?"staff":null,jobTitle=typeof body.jobTitle==="string"?body.jobTitle.trim():"",department=typeof body.department==="string"?body.department.trim():"";
+ const schoolId=typeof body.schoolId==="string"?body.schoolId:"",fullName=typeof body.fullName==="string"?body.fullName.trim():"",phone=normalizePhone(body.phone),role=body.role==="gate_staff"?"gate_staff":body.role==="bus_staff"?"bus_staff":body.role==="teacher"?"staff":null,jobTitle=typeof body.jobTitle==="string"?body.jobTitle.trim():"",department=typeof body.department==="string"?body.department.trim():"";
  if(!schoolId||fullName.length<2||fullName.length>160||!phone||!role||jobTitle.length<2||jobTitle.length>80||department.length>80)return response(400,{error:"Enter a valid name, phone number, role and job title."});
  const {data:membership,error:membershipError}=await admin.from("school_memberships").select("id").eq("school_id",schoolId).eq("user_id",auth.user.id).eq("role","school_admin").eq("status","active").maybeSingle();
  if(membershipError||!membership)return response(403,{error:"You can only create staff accounts for a school you administer."});
@@ -35,7 +35,7 @@ Deno.serve(async(req:Request)=>{
   const {error:permissionError}=await admin.from("staff_permissions").insert([{membership_id:newMembership.id,permission_key:"students.read_basic",granted_by:auth.user.id},{membership_id:newMembership.id,permission_key:"gate.check_in",granted_by:auth.user.id},{membership_id:newMembership.id,permission_key:"gate.check_out",granted_by:auth.user.id}]);
   if(permissionError){await admin.from("school_memberships").delete().eq("id",newMembership.id);await admin.auth.admin.deleteUser(userId);console.error("staff permissions insert failed",permissionError.message);return response(500,{error:"The staff permissions could not be saved. No account was retained."});}
  }
- const {error:auditError}=await admin.from("audit_logs").insert({school_id:schoolId,actor_user_id:auth.user.id,action:"staff.created",entity_type:"school_membership",entity_id:newMembership.id,metadata:{staff_name:fullName,staff_role:role==="staff"?"teacher":"gate_staff",phone}});
+ const {error:auditError}=await admin.from("audit_logs").insert({school_id:schoolId,actor_user_id:auth.user.id,action:"staff.created",entity_type:"school_membership",entity_id:newMembership.id,metadata:{staff_name:fullName,staff_role:role==="staff"?"teacher":role==="bus_staff"?"bus_driver":"gate_staff",phone}});
  if(auditError)console.error("staff audit log insert failed",auditError.message);
- return response(200,{success:true,staff:{fullName,phone,role:role==="staff"?"teacher":"gate_staff"},temporaryPassword:password});
+ return response(200,{success:true,staff:{fullName,phone,role:role==="staff"?"teacher":role==="bus_staff"?"bus_staff":"gate_staff"},temporaryPassword:password});
 });
