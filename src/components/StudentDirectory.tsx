@@ -178,26 +178,17 @@ export function StudentDirectory({ client, schoolId, schoolName, userId, onBack,
     try {
       const issued = await Promise.all(roster.map(async student => {
         const bytes = crypto.getRandomValues(new Uint8Array(32));
-        const token = btoa(String.fromCharCode(...bytes)).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/g, '');
-        const digest = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(token));
-        const tokenHash = Array.from(new Uint8Array(digest)).map(b => b.toString(16).padStart(2, '0')).join('');
-        return { student, token, tokenHash };
+        const candidateToken = btoa(String.fromCharCode(...bytes)).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/g, '');
+        const digest = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(candidateToken));
+        const candidateHash = Array.from(new Uint8Array(digest)).map(b => b.toString(16).padStart(2, '0')).join('');
+        const { data, error } = await client.rpc('get_or_create_student_qr', {
+          p_student_id: student.id, p_token: candidateToken, p_token_hash: candidateHash
+        });
+        if (error || typeof data?.token !== 'string') throw new Error('A secure QR pass could not be prepared for ' + student.full_name + '.');
+        return { student, token: data.token as string };
       }));
-      const studentIds = issued.map(item => item.student.id);
-      const { data: previousTags, error: previousError } = await client.from('tags').select('id,student_id').eq('school_id', schoolId).in('student_id', studentIds).eq('tag_type', 'bag').eq('status', 'active');
-      if (previousError) throw new Error('Existing student QR passes could not be checked. No codes were changed.');
-      const { data: newTags, error: insertError } = await client.from('tags').insert(issued.map(item => ({ school_id: schoolId, student_id: item.student.id, token_hash: item.tokenHash, tag_type: 'bag', status: 'active' }))).select('id,student_id');
-      if (insertError || !newTags || newTags.length !== issued.length) throw new Error('The class QR passes could not all be issued. No previous codes were revoked.');
-      const previousIds = (previousTags ?? []).map(item => item.id);
-      if (previousIds.length) {
-        const { error: revokeError } = await client.from('tags').update({ status: 'revoked', revoked_at: new Date().toISOString() }).in('id', previousIds);
-        if (revokeError) {
-          await client.from('tags').update({ status: 'revoked', revoked_at: new Date().toISOString() }).in('id', newTags.map(item => item.id));
-          throw new Error('Previous codes could not be safely replaced. The newly generated codes have been revoked; try again.');
-        }
-      }
       setBulkQrStudents(issued.map(item => ({ id: item.student.id, full_name: item.student.full_name, class_name: item.student.class_name ?? selectedClass.class_name, level: item.student.level ?? selectedClass.level, token: item.token })));
-      setNotice('QR passes generated for ' + issued.length + ' active students. Previous active codes have been revoked.');
+      setNotice('The class QR cards are ready. Existing student references were kept unchanged.');
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Class QR passes could not be generated.');
     } finally { setBusy(false); }
@@ -211,15 +202,12 @@ export function StudentDirectory({ client, schoolId, schoolName, userId, onBack,
       const token = btoa(String.fromCharCode(...bytes)).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/g, '');
       const digest = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(token));
       const tokenHash = Array.from(new Uint8Array(digest)).map(b => b.toString(16).padStart(2, '0')).join('');
-      const { data: tag, error: insertError } = await client.from('tags').insert({ school_id: schoolId, student_id: student.id, token_hash: tokenHash, tag_type: 'bag', status: 'active' }).select('id').single();
-      if (insertError || !tag) throw new Error('The student QR tag could not be issued. Check administrator access and try again.');
-      const { error: revokeError } = await client.from('tags').update({ status: 'revoked', revoked_at: new Date().toISOString() }).eq('school_id', schoolId).eq('student_id', student.id).eq('tag_type', 'bag').eq('status', 'active').neq('id', tag.id);
-      if (revokeError) {
-        await client.from('tags').update({ status: 'revoked', revoked_at: new Date().toISOString() }).eq('id', tag.id);
-        throw new Error('The previous student code could not be safely replaced. No new code was issued.');
-      }
-      setQrStudent(student); setQrToken(token);
-      setNotice('A new student QR code has been issued. Previous codes for this student are now revoked.');
+      const { data, error: replaceError } = await client.rpc('replace_student_qr', {
+        p_student_id: student.id, p_token: token, p_token_hash: tokenHash
+      });
+      if (replaceError || typeof data?.token !== 'string') throw new Error(replaceError?.message || 'The student QR tag could not be replaced. Check administrator access and try again.');
+      setQrStudent(student); setQrToken(data.token);
+      setNotice('The student QR reference has been replaced. All older codes are now revoked.');
     } catch (e) {
       setError(e instanceof Error ? e.message : 'The student QR code could not be issued.');
     } finally { setBusy(false); }
