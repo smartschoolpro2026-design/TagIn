@@ -203,7 +203,7 @@ export function TransportWorkspace({ client, schoolId, schoolName, mode, members
   const isAdmin = mode === 'admin';
   return <section className="transport-workspace">
     <div className="transport-heading">
-      <div><button className="back-link" type="button" onClick={onBack}><ArrowLeft size={16}/> Back to dashboard</button><p className="eyebrow">{isAdmin ? 'SCHOOL OPERATIONS' : 'DRIVER WORKSPACE'}</p><h1>{isAdmin ? 'Transport management' : 'My journeys'}</h1><p className="muted">{schoolName} · {isAdmin ? 'Manage vehicles, routes, drivers and student allocations.' : 'Record student pickup and drop-off on your assigned routes.'}</p></div>
+      <div><button className="back-link" type="button" onClick={onBack}><ArrowLeft size={16}/> Back to dashboard</button><p className="eyebrow">{isAdmin ? 'SCHOOL OPERATIONS' : 'BUS CREW WORKSPACE'}</p><h1>{isAdmin ? 'Transport management' : 'My route'}</h1><p className="muted">{schoolName} · {isAdmin ? 'Manage vehicles, routes, drivers and student allocations.' : 'Scan student QR codes at transport handovers.'}</p></div>
       <div className="transport-heading-icon"><BusFront size={28}/></div>
     </div>
     {error && <p className="form-error" role="alert">{error}</p>}{notice && <p className="student-notice" role="status">{notice}</p>}
@@ -238,7 +238,7 @@ export function TransportWorkspace({ client, schoolId, schoolName, mode, members
             {assignments.length===0&&<div className="student-empty">No students are assigned to this route yet.</div>}
           </div>
         </div>
-        <div className="transport-panel"><h2><Clock3 size={18}/> Recent journey activity</h2>{events.slice(0,20).map(e=><div className="transport-list-row" key={e.id}><span>{assignments.find(a=>a.student_id===e.student_id)?.students?.full_name || 'Student'} · {e.event_type.replaceAll('_',' ')}</span><small>{stamp(e.created_at)}</small></div>)}{!events.length&&<p className="muted">No journey events have been recorded yet.</p>}</div>
+        <div className="transport-panel"><h2><Clock3 size={18}/> Recent journey activity</h2>{events.slice(0,20).map(e=><div className="transport-list-row" key={e.id}><span>{assignments.find(a=>a.student_id===e.student_id)?.students?.full_name || 'Student'} · {e.event_type.replace(/_/g,' ')}</span><small>{stamp(e.created_at)}</small></div>)}{!events.length&&<p className="muted">No journey events have been recorded yet.</p>}</div>
       </>}
     </>}
     <p className="transport-footnote"><CheckCircle2 size={14}/> Transport activity is separate from school attendance. A bus pickup never checks a student into school.</p>
