@@ -256,6 +256,6 @@ export function StudentDirectory({ client, schoolId, schoolName, userId, onBack,
     </div>}
     <p className="student-footnote">Student records are retained when marked inactive. Attendance history is not deleted. Class and teacher assignments can be updated from this page.</p>
     {bulkQrStudents.length > 0 && <BulkStudentQrCards schoolName={schoolName} classLabel={selectedClass?.class_name ?? 'Class'} students={bulkQrStudents} onClose={() => setBulkQrStudents([])}/>}
-    {qrStudent && qrToken && <StudentQrCard referenceCode={qrReference} token={qrToken} onClose={() => {setQrStudent(null);setQrToken('');}}/>}
+    {qrStudent && qrToken && <StudentQrCard referenceCode={qrReference} token={qrToken} onClose={() => {setQrStudent(null);setQrToken('');setQrReference('');}}/>}
   </section>;
 }
