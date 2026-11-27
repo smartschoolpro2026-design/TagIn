@@ -1,11 +1,11 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 760 190" role="img" aria-labelledby="title desc">
-<title id="title">TagIn</title><desc id="desc">TagIn school identity and secure check-in logo</desc>
-<g transform="translate(18 18)">
-<path d="M48 8H24A16 16 0 0 0 8 24v24M144 8h24a16 16 0 0 1 16 16v24M184 144v24a16 16 0 0 1-16 16h-24M48 184H24A16 16 0 0 1 8 168v-24" fill="none" stroke="#14543B" stroke-width="12" stroke-linecap="round"/>
-<circle cx="96" cy="64" r="25" fill="#14543B"/>
-<path d="M50 137c4-27 20-42 46-42 14 0 26 5 34 14l-13 35H50z" fill="#14543B"/>
-<circle cx="143" cy="133" r="31" fill="#10A65A" stroke="#fff" stroke-width="5"/>
-<path d="m128 133 10 10 21-23" fill="none" stroke="#fff" stroke-width="8" stroke-linecap="round" stroke-linejoin="round"/>
+<title id="title">TagIn</title><desc id="desc">TagIn identity: an open doorway and forward path beside the TagIn wordmark</desc>
+<g transform="translate(18 10)">
+<path d="M42 170V56Q42 12 86 12h68q44 0 44 44v114" fill="none" stroke="#123F30" stroke-width="24" stroke-linecap="round" stroke-linejoin="round"/>
+<path d="M75 156V73l76-28v111" fill="#10A65A"/>
+<path d="M142 91v15" stroke="#123F30" stroke-width="8" stroke-linecap="round"/>
+<path d="M16 184Q91 140 179 133" fill="none" stroke="#123F30" stroke-width="15" stroke-linecap="round"/>
+<path d="M91 154Q126 124 191 108" fill="none" stroke="#10A65A" stroke-width="12" stroke-linecap="round"/>
 </g>
-<text x="230" y="135" font-family="Arial, Helvetica, sans-serif" font-size="112" font-weight="800" letter-spacing="-6" fill="#123F30">Tag<tspan fill="#10A65A">I</tspan>n</text>
+<text x="250" y="137" font-family="Arial, Helvetica, sans-serif" font-size="112" font-weight="800" letter-spacing="-6" fill="#123F30">Tag<tspan fill="#10A65A">I</tspan><tspan fill="#123F30">n</tspan></text>
 </svg>
