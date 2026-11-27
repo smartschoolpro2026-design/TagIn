@@ -215,7 +215,7 @@ Deno.serve(async (req: Request) => {
     }
 
     const { data: vehicle, error: vehicleError } = await admin.from("transport_vehicles")
-      .upsert({ school_id: schoolId, registration_number: "DEMO-TAGIN-01", vehicle_name: "TagIn School Bus", capacity: 18, active: true }, { onConflict: "school_id,registration_number" })
+      .upsert({ school_id: schoolId, registration_number: "DEMO-TAGIN-01", vehicle_name: "TagIn School Bus", capacity: 75, active: true }, { onConflict: "school_id,registration_number" })
       .select("id").single();
     if (vehicleError || !vehicle) throw new Error("Could not set up the demo bus.");
     let { data: route } = await admin.from("transport_routes").select("id").eq("school_id", schoolId).eq("name", "Ikeja Demo Route").maybeSingle();
@@ -269,7 +269,7 @@ Deno.serve(async (req: Request) => {
 
     const timetableRows = [
       { class_name: "Grade Two", subject_name: "Mathematics", weekday: 1, start_time: "08:00", end_time: "08:45" },
-      { class_name: "Primary 2", subject_name: "English Language", weekday: 1, start_time: "09:00", end_time: "09:45" },
+      { class_name: "Grade Two", subject_name: "English Language", weekday: 1, start_time: "09:00", end_time: "09:45" },
       { class_name: "Nursery", subject_name: "Numeracy", weekday: 2, start_time: "10:00", end_time: "10:30" },
     ];
     for (const row of timetableRows) {
