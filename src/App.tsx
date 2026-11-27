@@ -69,6 +69,9 @@ export default function App() {
       if (!alive) return;
       setSession(nextSession);
       setLoading(false);
+      if (_event === 'SIGNED_IN' && nextSession) {
+        window.setTimeout(() => { void client.rpc('record_auth_activity', { p_event: 'login' }); }, 0);
+      }
       if (!nextSession) { setProfile(null); setMemberships([]); setGuardianSchoolIds([]); setSchoolId(''); setShowSignIn(false); }
     });
     return () => { alive = false; subscription.unsubscribe(); };
@@ -318,7 +321,10 @@ export default function App() {
 
   async function signOut() {
     if (!client) return;
-    setBusy(true); await client.auth.signOut(); setBusy(false);
+    setBusy(true);
+    await client.rpc('record_auth_activity', { p_event: 'logout' });
+    await client.auth.signOut();
+    setBusy(false);
   }
 
   if (!isSupabaseConfigured || !client) {
