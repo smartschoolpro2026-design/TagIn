@@ -64,7 +64,13 @@ export default {
           status: upstream.status,
           headers,
         });
-      } catch {
+      } catch (error) {
+        // Never log the request body, phone number, password, or API key.
+        console.error("TagIn auth proxy upstream fetch failed", {
+          name: error instanceof Error ? error.name : "UnknownError",
+          message: error instanceof Error ? error.message.slice(0, 160) : "Unknown fetch failure",
+          upstreamHost: upstreamUrl.hostname,
+        });
         return Response.json({ error: "Authentication service unavailable" }, {
           status: 502,
           headers: { "Cache-Control": "no-store" },
