@@ -7,6 +7,7 @@ import type { Session } from '@supabase/supabase-js';
 import { isSupabaseConfigured, supabase } from './lib/supabase';
 import { StudentDirectory } from './components/StudentDirectory';
 import { AttendanceWorkspace } from './components/AttendanceWorkspace';
+import { StaffWorkspace } from './components/StaffWorkspace';
 
 type Profile = {
   full_name: string;
@@ -38,7 +39,7 @@ export default function App() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [showSchoolManagement, setShowSchoolManagement] = useState(false);
-  const [activeWorkspace, setActiveWorkspace] = useState<'students' | 'attendance' | ''>('');
+  const [activeWorkspace, setActiveWorkspace] = useState<'students' | 'attendance' | 'staff' | ''>('');
   const [schools, setSchools] = useState<School[]>([]);
   const [schoolNameInput, setSchoolNameInput] = useState('');
   const [schoolSlugInput, setSchoolSlugInput] = useState('');
@@ -270,7 +271,9 @@ export default function App() {
   const schoolName = selectedMembership?.schools?.name ?? (isPlatformAdmin ? 'All schools' : 'No active school');
   return <main className="workspace-shell">
     <header className="workspace-topbar"><Brand /><div className="account-actions">{!isSchoolAdmin && <span className="user-chip">{profile.full_name}</span>}<button className="icon-button" onClick={signOut} disabled={busy} aria-label="Sign out"><LogOut size={18} /></button></div></header>
-    {activeWorkspace === 'attendance' && selectedMembership && session ? (
+    {activeWorkspace === 'staff' && isSchoolAdmin && selectedMembership ? (
+      <StaffWorkspace client={client!} schoolId={selectedMembership.school_id} schoolName={schoolName} onBack={() => setActiveWorkspace('')} />
+    ) : activeWorkspace === 'attendance' && selectedMembership && session ? (
       <AttendanceWorkspace client={client!} schoolId={selectedMembership.school_id} schoolName={selectedMembership.schools?.name ?? 'Your school'} actorName={profile.full_name} canCheckIn={canCheckIn} canCheckOut={canCheckOut} onBack={() => setActiveWorkspace('')} />
     ) : activeWorkspace === 'students' && isSchoolAdmin && selectedMembership ? (
       <StudentDirectory client={client!} schoolId={selectedMembership.school_id} schoolName={selectedMembership.schools?.name ?? 'Your school'} onBack={() => setActiveWorkspace('')} />
@@ -289,7 +292,8 @@ export default function App() {
         {error && <p className="form-error" role="alert">{error}</p>}
         <section className="workspace-section"><p className="eyebrow">YOUR WORKSPACE</p><h2>{isPlatformAdmin ? 'Platform overview' : 'School operations'}</h2><div className="workspace-grid">
           {isPlatformAdmin && <WorkspaceCard icon={<ShieldCheck />} title="School management" description="Create and manage school workspaces and administrators." actionLabel="Manage schools" onAction={() => { setError(''); setShowSchoolManagement(true); }} />}
-          {(isPlatformAdmin || isSchoolAdmin || (isUnifiedStaff && (hasStaffPermission('students.create') || hasStaffPermission('students.update') || hasStaffPermission('registers.manage')))) && <WorkspaceCard icon={<Users />} title={isUnifiedStaff ? 'Student registers' : 'People and students'} description={isUnifiedStaff ? 'Manage the student records and class registers assigned to you.' : 'Manage student records, families, and staff access.'} actionLabel="Manage students" onAction={isSchoolAdmin ? () => setActiveWorkspace('students') : undefined} />}
+          {(isPlatformAdmin || isSchoolAdmin || (isUnifiedStaff && (hasStaffPermission('students.create') || hasStaffPermission('students.update') || hasStaffPermission('registers.manage')))) && <WorkspaceCard icon={<Users />} title={isUnifiedStaff ? 'Student registers' : 'Students'} description={isUnifiedStaff ? 'View the student records and class registers assigned to you.' : 'Manage student records and school registers.'} actionLabel="Manage students" onAction={isSchoolAdmin ? () => setActiveWorkspace('students') : undefined} />}
+          {isSchoolAdmin && <WorkspaceCard icon={<Users />} title="Staff management" description="Create teacher and gate staff accounts, manage access and review staff permissions." actionLabel="Manage staff" onAction={() => setActiveWorkspace('staff')} />}
           {(isSchoolAdmin || isUnifiedStaff && (hasStaffPermission('gate.scan') || hasStaffPermission('gate.check_in') || hasStaffPermission('gate.check_out')) || selectedMembership?.role === 'gate_staff') && <WorkspaceCard icon={<QrCode />} title="Gate check-in" description="Search students and record school arrival and departure with staff attribution." actionLabel="Open attendance" onAction={() => setActiveWorkspace('attendance')} />}
           {(isPlatformAdmin || isSchoolAdmin || (isUnifiedStaff && (hasStaffPermission('transport.view_assigned') || hasStaffPermission('transport.board') || hasStaffPermission('transport.drop_off'))) || selectedMembership?.role === 'bus_staff') && <WorkspaceCard icon={<BusFront />} title="Transport" description="View assigned journeys and record student boarding and drop-off." />}
           {(isPlatformAdmin || isSchoolAdmin) && <WorkspaceCard icon={<ClipboardList />} title="Reports and overview" description="Review attendance, school activity, and operational reports." />}
