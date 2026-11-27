@@ -13,5 +13,13 @@ Deno.serve(async (req: Request) => {
  const admin = createClient(url, service, { auth: { autoRefreshToken: false, persistSession: false } });
  const { error } = await admin.from("profiles").update({ must_change_password: false, temporary_password_expires_at: null }).eq("id", data.user.id);
  if (error) return jsonResponse(500, { error: "Could not finalize account setup" });
+ const { data: memberships } = await admin.from("school_memberships").select("school_id").eq("user_id", data.user.id).eq("status", "active");
+ const schoolIds = [...new Set((memberships ?? []).map(item => item.school_id))];
+ const records = (schoolIds.length ? schoolIds : [null]).map(school_id => ({
+  school_id, actor_user_id: data.user.id, action: "auth.password_changed",
+  entity_type: "profile", entity_id: data.user.id, metadata: { source: "account_setup" },
+ }));
+ const { error: auditError } = await admin.from("audit_logs").insert(records);
+ if (auditError) console.error("password change audit insert failed", auditError.message);
  return jsonResponse(200, { success: true });
 });
