@@ -90,3 +90,57 @@
 @media(max-width:900px){.public-hero{gap:30px;padding-top:60px}.public-preview{transform:scale(.97);transform-origin:center}.public-school-band{padding:44px 30px}.public-security{margin:50px 24px}}
 @media(max-width:700px){.public-nav{height:65px;padding:0 18px}.public-nav nav{display:none}.public-hero{grid-template-columns:1fr;padding:54px 20px 50px;gap:38px}.public-hero h1{font-size:43px;letter-spacing:-1.9px}.public-hero-copy>p{font-size:13px}.public-preview{transform:none;margin:0 4px}.preview-cards{gap:6px}.preview-cards article{padding:9px 7px;min-height:126px}.preview-cards article strong{font-size:10px}.preview-float{right:-5px}.public-proof{display:block;padding:20px}.public-proof p{margin-top:7px;line-height:1.6}.public-platform{padding:58px 20px}.public-feature-grid{grid-template-columns:1fr 1fr}.public-feature-grid article{padding:17px}.public-school-band{display:block;padding:38px 20px}.public-role-list{min-width:0;margin-top:24px}.public-security{margin:36px 18px;padding:24px;display:grid;grid-template-columns:auto 1fr}.public-security .public-primary{grid-column:1/-1;width:100%}.public-footer{padding:20px;gap:12px}.public-footer>span{display:none}}
 @media(max-width:400px){.public-feature-grid{grid-template-columns:1fr}.public-hero h1{font-size:37px}.public-hero-actions{align-items:flex-start;flex-direction:column;gap:15px}.public-role-list{grid-template-columns:1fr}.public-footer .public-brand{font-size:14px}}
+
+
+/* TagIn premium workspace refresh — dashboard presentation only */
+.workspace-shell{max-width:1240px;padding:0 32px}
+.workspace-topbar{height:82px;border-bottom-color:#dce6dd}
+.workspace-topbar .brand{font-size:29px;gap:13px}
+.workspace-topbar .brand-mark{width:42px;height:42px;border-radius:14px}
+.workspace-topbar .brand-mark svg{width:23px;height:23px}
+.icon-button{width:46px;height:46px;border-radius:14px;box-shadow:0 4px 14px #17372f0a}
+.school-admin-welcome{position:relative;overflow:hidden;min-height:228px;margin-top:28px;padding:38px 42px;border:1px solid #204c3d;border-radius:24px;background:radial-gradient(ellipse at 90% 0%,#39785b 0%,transparent 42%),linear-gradient(118deg,#102f27 0%,#194536 58%,#245c45 100%);box-shadow:0 18px 44px #153b2c20}
+.school-admin-welcome:after{content:"";position:absolute;width:230px;height:230px;right:95px;bottom:-170px;border:1px solid #ffffff20;border-radius:50%;box-shadow:0 0 0 28px #ffffff08,0 0 0 58px #ffffff06}
+.school-identity-copy,.school-identity-mark{position:relative;z-index:1}
+.school-identity-copy .eyebrow{color:#a5d5b6;letter-spacing:2px}
+.school-identity-copy h1{color:#fff;font-size:clamp(34px,4.5vw,51px);letter-spacing:-1.8px}
+.school-admin-name{margin-top:15px;color:#e0f0e4;font-size:18px}
+.school-admin-role{color:#b5d2bf;font-size:14px}
+.school-identity-mark{width:92px;height:92px;flex-basis:92px;border:1px solid #ffffff24;border-radius:24px;background:#ffffff12;color:#d7f1df;backdrop-filter:blur(8px)}
+.workspace-section{padding:46px 0 58px}
+.workspace-section>.eyebrow{font-size:11px;letter-spacing:2px}
+.workspace-section h2{margin-bottom:24px;font-size:32px;letter-spacing:-1.1px}
+.workspace-grid{grid-template-columns:repeat(2,minmax(0,1fr));gap:18px}
+.workspace-card{position:relative;display:flex;min-height:230px;flex-direction:column;align-items:flex-start;padding:25px 26px 23px;border:1px solid #e0e9e1;border-radius:19px;background:linear-gradient(145deg,#fff 0%,#fbfdfb 100%);box-shadow:0 5px 18px #193d2d08;transition:transform .18s ease,border-color .18s ease,box-shadow .18s ease}
+.workspace-card:hover{transform:translateY(-3px);border-color:#b9d2bf;box-shadow:0 14px 30px #193d2d12}
+.workspace-card-icon{width:48px;height:48px;border-radius:15px;background:#e7f1e9;color:#286447}
+.workspace-card-icon svg{width:23px;height:23px}
+.workspace-card h3{margin:19px 0 8px;font-size:19px;letter-spacing:-.35px}
+.workspace-card p{max-width:48ch;color:#6f8075;font-size:14.5px;line-height:1.65}
+.module-action{margin-top:auto;padding:11px 14px;border-color:#d5e5d8;border-radius:10px;background:#f0f6f0;color:#245a40;font-size:13px}
+.module-action:hover{background:#e3f0e5;border-color:#a9cbb0}
+.coming-soon{margin-top:auto;padding-top:18px}
+.workspace-footer{padding-top:22px}
+@media(max-width:700px){
+ .workspace-shell{padding:0 18px}
+ .workspace-topbar{height:70px}
+ .workspace-topbar .brand{font-size:27px}
+ .workspace-topbar .brand-mark{width:40px;height:40px}
+ .school-admin-welcome{min-height:0;margin-top:19px;padding:25px 21px;border-radius:20px;gap:10px}
+ .school-identity-copy .eyebrow{font-size:10px;letter-spacing:1.6px}
+ .school-identity-copy h1{font-size:clamp(29px,8vw,37px);letter-spacing:-1.1px}
+ .school-admin-name{margin-top:12px;font-size:16px}
+ .school-admin-role{font-size:13px}
+ .school-identity-mark{width:57px;height:57px;flex-basis:57px;border-radius:17px}
+ .school-identity-mark svg{width:29px;height:29px}
+ .workspace-section{padding:34px 0 42px}
+ .workspace-section h2{margin-bottom:18px;font-size:27px}
+ .workspace-grid{grid-template-columns:1fr;gap:13px}
+ .workspace-card{min-height:0;padding:19px;border-radius:17px}
+ .workspace-card-icon{width:42px;height:42px;border-radius:13px}
+ .workspace-card h3{margin:14px 0 6px;font-size:17px}
+ .workspace-card p{font-size:13.5px;line-height:1.58}
+ .module-action{margin-top:17px;padding:10px 13px}
+ .workspace-footer{padding:18px 0 24px}
+}
+@media(min-width:701px) and (max-width:900px){.workspace-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.workspace-shell{padding:0 24px}}
