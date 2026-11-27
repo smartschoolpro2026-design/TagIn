@@ -125,7 +125,7 @@ export function StudentDirectory({ client, schoolId, schoolName, onBack }: Props
     try {
       const issued = await Promise.all(roster.map(async student => {
         const bytes = crypto.getRandomValues(new Uint8Array(32));
-        const token = btoa(String.fromCharCode(...bytes)).replace(/\\+/g, '-').replace(/\\//g, '_').replace(/=+$/g, '');
+        const token = btoa(String.fromCharCode(...bytes)).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/g, '');
         const digest = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(token));
         const tokenHash = Array.from(new Uint8Array(digest)).map(b => b.toString(16).padStart(2, '0')).join('');
         return { student, token, tokenHash };
