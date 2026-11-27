@@ -29,11 +29,11 @@ export function ScoresWorkspace({client,schoolId,schoolName,mode,membershipId,us
   setLoading(false);
  }
  useEffect(()=>{void load();},[client,schoolId,mode,membershipId]);
- useEffect(()=>{if(!selected)return;let alive=true;async function get(){
+ useEffect(()=>{const assessment=selected;if(!assessment)return;let alive=true;async function get(){
   setScores({});setDrafts({});
   const [sc,st]=await Promise.all([
-   client.from('assessment_scores').select('student_id,score,remarks').eq('assessment_id',selected.id).eq('school_id',schoolId),
-   mode==='parent'?Promise.resolve({data:children.filter(x=>x.class_name===selected.class_name),error:null} as any):client.from('students').select('id,full_name,class_name').eq('school_id',schoolId).eq('class_name',selected.class_name).eq('active',true).order('full_name')
+   client.from('assessment_scores').select('student_id,score,remarks').eq('assessment_id',assessment.id).eq('school_id',schoolId),
+   mode==='parent'?Promise.resolve({data:children.filter(x=>x.class_name===assessment.class_name),error:null} as any):client.from('students').select('id,full_name,class_name').eq('school_id',schoolId).eq('class_name',assessment.class_name).eq('active',true).order('full_name')
   ]);
   if(!alive)return;
   if(sc.error)setError('Scores could not be loaded.');else{const m:Record<string,Score>={},d:Record<string,{score:string;remarks:string}>={};(sc.data??[]).forEach((x:any)=>{m[x.student_id]=x;d[x.student_id]={score:String(x.score),remarks:x.remarks??''};});setScores(m);setDrafts(d);}
