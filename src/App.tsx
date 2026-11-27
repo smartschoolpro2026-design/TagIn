@@ -48,6 +48,7 @@ export default function App() {
   const [busy, setBusy] = useState(false);
   const [loading, setLoading] = useState(true);
   const [showSignIn, setShowSignIn] = useState(false);
+  const [roleMode, setRoleMode] = useState<'choose'|'staff'|'parent'|''>('');
   const [error, setError] = useState('');
   const [showSchoolManagement, setShowSchoolManagement] = useState(() => sessionStorage.getItem('tagin:last-view') === 'school-management');
   const [activeWorkspace, setActiveWorkspace] = useState<Workspace>(() => { const saved=sessionStorage.getItem('tagin:last-view') ?? ''; const allowed: Workspace[]=['students','attendance','staff','families','family','transport-admin','transport-driver','timetable-admin','timetable-teacher','timetable-parent','scores-admin','scores-teacher','scores-parent','students-advanced','attendance-scan','activity-audit']; return allowed.includes(saved as Workspace)?saved as Workspace:''; });
@@ -73,7 +74,7 @@ export default function App() {
       if (_event === 'SIGNED_IN' && nextSession) {
         window.setTimeout(() => { void client.rpc('record_auth_activity', { p_event: 'login' }); }, 0);
       }
-      if (!nextSession) { setProfile(null); setMemberships([]); setGuardianSchoolIds([]); setSchoolId(''); setShowSignIn(false); }
+      if (!nextSession) { setProfile(null); setMemberships([]); setGuardianSchoolIds([]); setSchoolId(''); setRoleMode(''); setShowSignIn(false); }
     });
     return () => { alive = false; subscription.unsubscribe(); };
   }, []);
@@ -100,8 +101,12 @@ export default function App() {
         setProfile(profileResult.data as Profile);
         const activeMemberships = (membershipsResult.data ?? []) as unknown as Membership[];
         setMemberships(activeMemberships);
-        setGuardianSchoolIds((guardianResult.data ?? []).map((item) => item.school_id));
-        setSchoolId((current) => current || activeMemberships[0]?.school_id || '');
+        const linkedGuardianSchools=(guardianResult.data ?? []).map((item) => item.school_id);
+        setGuardianSchoolIds(linkedGuardianSchools);
+        const hasStaffRole=activeMemberships.some((item)=>['staff','gate_staff','bus_staff'].includes(item.role));
+        const hasParentRole=activeMemberships.some((item)=>item.role==='parent')||linkedGuardianSchools.length>0;
+        setRoleMode(hasStaffRole&&hasParentRole?'choose':hasStaffRole?'staff':hasParentRole?'parent':'');
+        setSchoolId((current) => current || activeMemberships.find((item)=>item.role==='staff')?.school_id || activeMemberships.find((item)=>item.role==='parent')?.school_id || activeMemberships[0]?.school_id || linkedGuardianSchools[0] || '');
       }
       setLoading(false);
     };
@@ -347,7 +352,10 @@ export default function App() {
   const isPlatformAdmin = profile.platform_role === 'super_admin';
   const isSchoolAdmin = selectedMembership?.role === 'school_admin';
   const isUnifiedStaff = selectedMembership?.role === 'staff';
-  const isParent = selectedMembership?.role === 'parent' || guardianSchoolIds.length > 0;
+  const hasStaffWorkspace = memberships.some((item)=>['staff','gate_staff','bus_staff'].includes(item.role));
+  const hasParentWorkspace = memberships.some((item)=>item.role==='parent') || guardianSchoolIds.length>0;
+  const hasMultipleWorkspaces = hasStaffWorkspace && hasParentWorkspace;
+  const isParent = roleMode === 'parent' || (roleMode === '' && (selectedMembership?.role === 'parent' || guardianSchoolIds.length > 0));
   const hasStaffPermission = (permission: string) => staffPermissions.includes(permission);
   const canCheckIn = Boolean(selectedMembership && (isSchoolAdmin || selectedMembership.role === 'gate_staff' || (isUnifiedStaff && (hasStaffPermission('gate.scan') || hasStaffPermission('gate.check_in')))));
   const canCheckOut = Boolean(selectedMembership && (isSchoolAdmin || selectedMembership.role === 'gate_staff' || (isUnifiedStaff && (hasStaffPermission('gate.scan') || hasStaffPermission('gate.check_out')))));
@@ -359,8 +367,9 @@ export default function App() {
         ? `School staff · ${staffJobTitle}`
         : selectedMembership?.role?.replaceAll('_', ' ') ?? 'School member';
   const schoolName = selectedMembership?.schools?.name ?? (isPlatformAdmin ? 'All schools' : 'No active school');
+  if (hasMultipleWorkspaces && roleMode === 'choose') return <main className="auth-shell"><Brand /><section className="auth-card"><div className="auth-icon"><Users size={25}/></div><p className="eyebrow">ONE TAGIN ACCOUNT · TWO WORKSPACES</p><h1>Where would you like to go?</h1><p className="muted">Your account is connected to this school as both a staff member and a parent. Choose the workspace you want to open.</p><button className="primary-button" type="button" onClick={()=>{const staffMembership=memberships.find((item)=>['staff','gate_staff','bus_staff'].includes(item.role));if(staffMembership)setSchoolId(staffMembership.school_id);setRoleMode('staff');}}>Teacher / Staff workspace <ArrowRight size={17}/></button><button className="secondary-button" type="button" onClick={()=>{const parentMembership=memberships.find((item)=>item.role==='parent');setSchoolId(parentMembership?.school_id??guardianSchoolIds[0]??schoolId);setRoleMode('parent');}}>Parent / Guardian workspace <ArrowRight size={17}/></button><button className="login-home-link" type="button" onClick={signOut}>Sign out</button></section></main>;
   return <main className="workspace-shell">
-    <header className="workspace-topbar"><Brand /><div className="account-actions">{(canCheckIn || canCheckOut) && activeWorkspace === '' && <button className="icon-button qr-header-button" type="button" onClick={() => setActiveWorkspace('attendance-scan')} aria-label="Scan student QR code" title="Scan student QR code"><svg className="tagin-scan-icon" viewBox="0 0 64 64" width="25" height="25" fill="none" aria-hidden="true"><path d="M8 20V11a3 3 0 0 1 3-3h9M44 8h9a3 3 0 0 1 3 3v9M56 44v9a3 3 0 0 1-3 3h-9M20 56h-9a3 3 0 0 1-3-3v-9M21 25h22v5M21 39h22v-5M8 32h48" stroke="currentColor" strokeWidth="3.8" strokeLinecap="round" strokeLinejoin="round"/></svg></button>}{!isSchoolAdmin && !isParent && <span className="user-chip">{profile.full_name}</span>}<button className="icon-button" onClick={signOut} disabled={busy} aria-label="Sign out"><LogOut size={18} /></button></div></header>
+    <header className="workspace-topbar"><Brand /><div className="account-actions">{(canCheckIn || canCheckOut) && activeWorkspace === '' && <button className="icon-button qr-header-button" type="button" onClick={() => setActiveWorkspace('attendance-scan')} aria-label="Scan student QR code" title="Scan student QR code"><svg className="tagin-scan-icon" viewBox="0 0 64 64" width="25" height="25" fill="none" aria-hidden="true"><path d="M8 20V11a3 3 0 0 1 3-3h9M44 8h9a3 3 0 0 1 3 3v9M56 44v9a3 3 0 0 1-3 3h-9M20 56h-9a3 3 0 0 1-3-3v-9M21 25h22v5M21 39h22v-5M8 32h48" stroke="currentColor" strokeWidth="3.8" strokeLinecap="round" strokeLinejoin="round"/></svg></button>}{!isSchoolAdmin && !isParent && <span className="user-chip">{profile.full_name}</span>}{hasMultipleWorkspaces&&<button className="secondary-button" type="button" onClick={()=>setRoleMode('choose')}>Switch workspace</button>}<button className="icon-button" onClick={signOut} disabled={busy} aria-label="Sign out"><LogOut size={18} /></button></div></header>
     {activeWorkspace === '' && isParent && session ? (
       <ParentDashboard client={client!} userId={session.user.id} parentName={profile.full_name} onOpen={(view) => setActiveWorkspace(view)} />
     ) : activeWorkspace === 'activity-audit' && session && (isPlatformAdmin || isSchoolAdmin) ? (
@@ -403,7 +412,7 @@ export default function App() {
       </section>
     ) : (
       <>
-        <section className={`welcome-panel ${isSchoolAdmin ? 'school-admin-welcome' : ''}`}>{isSchoolAdmin ? <><div className="school-identity-copy"><p className="eyebrow">SCHOOL WORKSPACE</p><h1>{schoolName}</h1><p className="school-admin-name">{profile.full_name}</p><p className="school-admin-role">School Admin</p></div><div className="welcome-mark school-identity-mark"><GraduationCap size={46} /></div></> : <><div><p className="eyebrow">YOUR TAGIN WORKSPACE</p><h1>Hello, {profile.full_name.split(' ')[0]}.</h1><p className="muted">Your school day, connected.</p></div><div className="welcome-mark"><GraduationCap size={42} /></div></>}</section>
+        <section className={`welcome-panel ${isSchoolAdmin ? 'school-admin-welcome' : ''}`}>{isSchoolAdmin ? <><div className="school-identity-copy"><p className="eyebrow">SCHOOL WORKSPACE</p><h1>{schoolName}</h1><p className="school-admin-name">{profile.full_name}</p><p className="school-admin-role">School Admin</p></div><div className="welcome-mark school-identity-mark"><GraduationCap size={46} /></div></> : <><div><p className="eyebrow">{isUnifiedStaff?'TEACHER / STAFF WORKSPACE':'YOUR TAGIN WORKSPACE'}</p><h1>Hello, {profile.full_name.split(' ')[0]}.</h1><p className="muted">Your school day, connected.</p></div><div className="welcome-mark"><GraduationCap size={42} /></div></>}</section>
         {!isSchoolAdmin && <section className="workspace-meta"><div><span className="meta-label">ACCESS LEVEL</span><strong>{role}</strong></div><div><span className="meta-label">SCHOOL</span>{memberships.length > 1 ? <select aria-label="Select school" value={selectedMembership?.school_id ?? ""} onChange={(event) => setSchoolId(event.target.value)}>{memberships.map((item) => <option key={item.school_id} value={item.school_id}>{item.schools?.name ?? item.school_id}</option>)}</select> : <strong>{schoolName}</strong>}</div></section>}
         {error && <p className="form-error" role="alert">{error}</p>}
         <section className="workspace-section"><p className="eyebrow">YOUR WORKSPACE</p><h2>{isPlatformAdmin ? 'Platform overview' : 'School operations'}</h2><div className="workspace-grid">
