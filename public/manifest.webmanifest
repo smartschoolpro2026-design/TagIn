@@ -1,0 +1,17 @@
+{
+  "name": "TagIn — School Check-in",
+  "short_name": "TagIn",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#ffffff",
+  "theme_color": "#102b26",
+  "description": "Safer school arrivals, departures, and transport updates.",
+  "icons": [
+    {
+      "src": "/tagin-logo.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    }
+  ]
+}
