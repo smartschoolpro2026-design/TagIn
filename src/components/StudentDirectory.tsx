@@ -88,7 +88,7 @@ export function StudentDirectory({ client, schoolId, schoolName, userId, onBack,
   }
   function openEditStudent(student: Student) {
     const assignedClass = classes.find(item => item.id === student.class_id);
-    setEditing(student); setFullName(student.full_name); setClassId(student.class_id ?? '');
+    setSelectedClassId(student.class_id ?? '');\n    setEditing(student); setFullName(student.full_name); setClassId(student.class_id ?? '');
     setTeacherMembershipId(assignedClass?.teacher_membership_id ?? '');
     setShowNewClass(false); setShowForm(true); setError(''); setNotice('');
   }
