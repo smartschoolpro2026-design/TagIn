@@ -119,7 +119,7 @@ export function StudentDirectory({ client, schoolId, schoolName, onBack }: Props
     if (!bulkClassId || busy) return;
     const selectedClass = classes.find(item => item.id === bulkClassId);
     if (!selectedClass) return;
-    const roster = students.filter(item => item.active && item.class_id === bulkClassId);
+    const roster = students.filter(item => item.active && (item.class_id === bulkClassId || (!item.class_id && item.class_name === selectedClass.class_name && (item.level ?? '') === selectedClass.level)));
     if (!roster.length) { setError('There are no active students in this class to generate QR passes for.'); return; }
     setBusy(true); setError(''); setNotice(''); setBulkQrStudents([]);
     try {
