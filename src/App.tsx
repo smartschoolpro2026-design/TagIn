@@ -48,8 +48,8 @@ export default function App() {
   const [loading, setLoading] = useState(true);
   const [showSignIn, setShowSignIn] = useState(false);
   const [error, setError] = useState('');
-  const [showSchoolManagement, setShowSchoolManagement] = useState(false);
-  const [activeWorkspace, setActiveWorkspace] = useState<'students' | 'attendance' | 'staff' | 'families' | 'family' | 'transport-admin' | 'transport-driver' | 'timetable-admin' | 'timetable-teacher' | 'timetable-parent' | 'scores-admin' | 'scores-teacher' | 'scores-parent' | 'students-advanced' | 'attendance-scan' | 'activity-audit' | ''>('');
+  const [showSchoolManagement, setShowSchoolManagement] = useState(() => sessionStorage.getItem('tagin:last-view') === 'school-management');
+  const [activeWorkspace, setActiveWorkspace] = useState<'students' | 'attendance' | 'staff' | 'families' | 'family' | 'transport-admin' | 'transport-driver' | 'timetable-admin' | 'timetable-teacher' | 'timetable-parent' | 'scores-admin' | 'scores-teacher' | 'scores-parent' | 'students-advanced' | 'attendance-scan' | 'activity-audit' | ''>(() => { const saved=sessionStorage.getItem('tagin:last-view') ?? ''; const allowed=['students','attendance','staff','families','family','transport-admin','transport-driver','timetable-admin','timetable-teacher','timetable-parent','scores-admin','scores-teacher','scores-parent','students-advanced','attendance-scan','activity-audit']; return allowed.includes(saved)?saved as typeof activeWorkspace:''; });
   const [schools, setSchools] = useState<School[]>([]);
   const [schoolNameInput, setSchoolNameInput] = useState('');
   const [schoolSlugInput, setSchoolSlugInput] = useState('');
@@ -107,6 +107,8 @@ export default function App() {
     void loadAccount();
     return () => { alive = false; };
   }, [session]);
+
+  useEffect(() => { if (!session) { sessionStorage.removeItem('tagin:last-view'); return; } const view=showSchoolManagement?'school-management':activeWorkspace||'dashboard'; sessionStorage.setItem('tagin:last-view',view); }, [session,showSchoolManagement,activeWorkspace]);
 
   const navigationReady = useRef(false);
   const restoringNavigation = useRef(false);
