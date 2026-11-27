@@ -16,9 +16,12 @@ function jsonResponse(status: number, body: Record<string, unknown>) {
 
 function normalizePhone(value: unknown): string | null {
   if (typeof value !== "string" || value.length > 40) return null;
-  const compact = value.trim().replace(/[\s().-]/g, "");
-  const normalized = compact.startsWith("00") ? "+" + compact.slice(2) : compact;
-  return /^\+[1-9]\d{7,14}$/.test(normalized) ? normalized : null;
+  let compact = value.trim().replace(/[ ().-]/g, "");
+  if (compact.startsWith("00")) compact = "+" + compact.slice(2);
+  if (compact.length === 11 && compact[0] === "0") compact = "+234" + compact.slice(1);
+  if (!compact.startsWith("+") || compact.length < 9 || compact.length > 16) return null;
+  if (!Array.from(compact.slice(1)).every((character) => character >= "0" && character <= "9")) return null;
+  return compact;
 }
 
 async function authAlias(phone: string): Promise<string> {
