@@ -23,7 +23,7 @@ Deno.serve(async(req:Request)=>{try{
  const {data:link,error:linkError}=await admin.from("student_guardians").select("student_id").eq("school_id",student.school_id).eq("student_id",student.id).in("guardian_id",guardianIds).maybeSingle();
  if(linkError||!link)return json(403,{error:"This child is not linked to your family account."});
  const bytes=crypto.getRandomValues(new Uint8Array(32));
- const token=btoa(String.fromCharCode(...bytes)).replace(/\\+/g,"-").replace(/\\//g,"_").replace(/=+$/g,"");
+ const token=btoa(String.fromCharCode(...bytes)).replaceAll("+","-").replaceAll("/","_").replaceAll("=","");
  const digest=await crypto.subtle.digest("SHA-256",new TextEncoder().encode(token));
  const tokenHash=Array.from(new Uint8Array(digest),b=>b.toString(16).padStart(2,"0")).join("");
  const {data:tag,error:insertError}=await admin.from("tags").insert({school_id:student.school_id,student_id:student.id,token_hash:tokenHash,status:"active"}).select("id").single();
