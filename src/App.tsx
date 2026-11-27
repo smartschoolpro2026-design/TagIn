@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef, useState, type FormEvent, type ReactNode } from 'react';
 import {
   ArrowRight, Award, Bell, BusFront, CalendarDays, CheckCircle2, ClipboardList, GraduationCap, HeartHandshake, ShieldCheck,
-  Eye, EyeOff, LogOut, QrCode, Users,
+  Eye, EyeOff, LogOut, Users,
 } from 'lucide-react';
 import type { Session } from '@supabase/supabase-js';
 import { isSupabaseConfigured, supabase } from './lib/supabase';
@@ -349,7 +349,7 @@ export default function App() {
         : selectedMembership?.role?.replaceAll('_', ' ') ?? 'School member';
   const schoolName = selectedMembership?.schools?.name ?? (isPlatformAdmin ? 'All schools' : 'No active school');
   return <main className="workspace-shell">
-    <header className="workspace-topbar"><Brand /><div className="account-actions">{(canCheckIn || canCheckOut) && activeWorkspace === '' && <button className="icon-button qr-header-button" type="button" onClick={() => setActiveWorkspace('attendance-scan')} aria-label="Scan student QR code" title="Scan student QR code"><QrCode size={21} /></button>}{!isSchoolAdmin && <span className="user-chip">{profile.full_name}</span>}<button className="icon-button" onClick={signOut} disabled={busy} aria-label="Sign out"><LogOut size={18} /></button></div></header>
+    <header className="workspace-topbar"><Brand /><div className="account-actions">{(canCheckIn || canCheckOut) && activeWorkspace === '' && <button className="icon-button qr-header-button" type="button" onClick={() => setActiveWorkspace('attendance-scan')} aria-label="Scan student QR code" title="Scan student QR code"><svg className="tagin-scan-icon" viewBox="0 0 64 64" width="25" height="25" fill="none" aria-hidden="true"><path d="M8 20V11a3 3 0 0 1 3-3h9M44 8h9a3 3 0 0 1 3 3v9M56 44v9a3 3 0 0 1-3 3h-9M20 56h-9a3 3 0 0 1-3-3v-9M21 25h22v5M21 39h22v-5M8 32h48" stroke="currentColor" strokeWidth="3.8" strokeLinecap="round" strokeLinejoin="round"/></svg></button>}{!isSchoolAdmin && <span className="user-chip">{profile.full_name}</span>}<button className="icon-button" onClick={signOut} disabled={busy} aria-label="Sign out"><LogOut size={18} /></button></div></header>
     {activeWorkspace === 'scores-admin' && isSchoolAdmin && selectedMembership ? (
       <ScoresWorkspace client={client!} schoolId={selectedMembership.school_id} schoolName={schoolName} mode="admin" userId={session?.user.id} onBack={() => setActiveWorkspace('')} />
     ) : activeWorkspace === 'scores-teacher' && selectedMembership?.role === 'staff' ? (
