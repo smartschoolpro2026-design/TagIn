@@ -1,6 +1,6 @@
-import { useEffect, useMemo, useState, type FormEvent } from 'react';
+import { useEffect, useMemo, useRef, useState, type FormEvent } from 'react';
 import type { SupabaseClient } from '@supabase/supabase-js';
-import { ArrowLeft, BusFront, CheckCircle2, Clock3, MapPin, Plus, Route, ShieldCheck, Users } from 'lucide-react';
+import { ArrowLeft, BusFront, Camera, CheckCircle2, Clock3, MapPin, Plus, Route, ShieldCheck, Users, X } from 'lucide-react';
 
 type Vehicle = { id: string; registration_number: string; vehicle_name: string | null; capacity: number; active: boolean };
 type Stop = { id: string; route_id: string; stop_name: string; stop_order: number; scheduled_time: string | null };
@@ -10,6 +10,9 @@ type Student = { id: string; full_name: string; class_name: string | null; activ
 type RouteStudent = { id: string; student_id: string; pickup_stop_id: string | null; dropoff_stop_id: string | null; students: Student | null };
 type EventRow = { id: string; student_id: string; event_type: string; created_at: string; note: string | null; students?: Student | null };
 type Props = { client: SupabaseClient; schoolId: string; schoolName: string; mode: 'admin' | 'driver'; membershipId?: string; onBack: () => void };
+type DetectedCode = { rawValue: string };
+type QRDetector = { detect: (source: HTMLVideoElement) => Promise<DetectedCode[]> };
+type QRDetectorConstructor = new (options: { formats: string[] }) => QRDetector;
 const stamp = (v: string) => new Date(v).toLocaleString([], { dateStyle: 'medium', timeStyle: 'short' });
 
 export function TransportWorkspace({ client, schoolId, schoolName, mode, membershipId, onBack }: Props) {
@@ -34,6 +37,10 @@ export function TransportWorkspace({ client, schoolId, schoolName, mode, members
   const [stopName, setStopName] = useState('');
   const [stopTime, setStopTime] = useState('');
   const [driverId, setDriverId] = useState('');
+  const [assistantId, setAssistantId] = useState('');
+  const [scanActive, setScanActive] = useState(false);
+  const [cameraError, setCameraError] = useState('');
+  const videoRef = useRef<HTMLVideoElement | null>(null);
   const [studentId, setStudentId] = useState('');
   const [pickupStopId, setPickupStopId] = useState('');
   const [dropoffStopId, setDropoffStopId] = useState('');
@@ -113,11 +120,12 @@ export function TransportWorkspace({ client, schoolId, schoolName, mode, members
     else { setStopName(''); setStopTime(''); setNotice('Stop added to this route.'); await loadAdmin(); await loadAssignments(selectedRoute); }
     setBusy(false);
   }
-  async function assignDriver(e: FormEvent) {
+  async function assignCrew(e: FormEvent, assignmentType: 'driver' | 'assistant') {
     e.preventDefault(); setBusy(true); setError(''); setNotice('');
-    const { error: err } = await client.from('transport_route_drivers').insert({ school_id: schoolId, route_id: selectedRoute, membership_id: driverId });
-    if (err) setError(err.code === '23505' ? 'This driver is already assigned to the route.' : 'Driver assignment failed. Confirm the account is active bus staff.');
-    else { setDriverId(''); setNotice('Driver assigned to this route.'); await loadAdmin(); }
+    const selectedId = assignmentType === 'driver' ? driverId : assistantId;
+    const { error: err } = await client.from('transport_route_drivers').insert({ school_id: schoolId, route_id: selectedRoute, membership_id: selectedId, assignment_type: assignmentType });
+    if (err) setError(err.code === '23505' ? 'This person is already assigned to the route.' : 'Crew assignment failed. Confirm the account is active bus staff.');
+    else { if (assignmentType === 'driver') setDriverId(''); else setAssistantId(''); setNotice(assignmentType === 'driver' ? 'Driver assigned to this route.' : 'Bus assistant assigned to this route.'); await loadAdmin(); }
     setBusy(false);
   }
   async function assignStudent(e: FormEvent) {
@@ -135,7 +143,63 @@ export function TransportWorkspace({ client, schoolId, schoolName, mode, members
     setBusy(false);
   }
 
-  const latestEvent = (id: string) => events.find((e) => e.student_id === id && ['picked_up','dropped_off'].includes(e.event_type));
+  async function resolveDriverQr(rawValue: string) {
+    setCameraError(''); setError(''); setNotice('');
+    let token = rawValue.trim();
+    if (/^https?:\/\//i.test(token)) {
+      try { const scannedUrl = new URL(token); if (scannedUrl.origin === 'https://tagin.smartschoolpro2026.workers.dev' && scannedUrl.pathname === '/scan') token = scannedUrl.searchParams.get('code') || ''; }
+      catch { /* Validate raw QR below. */ }
+    }
+    if (token.toUpperCase().startsWith('TAGIN:')) token = token.slice(6).trim();
+    if (!token) { setCameraError('This QR code is empty.'); return; }
+    try {
+      const digest = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(token));
+      const tokenHash = Array.from(new Uint8Array(digest)).map((b) => b.toString(16).padStart(2, '0')).join('');
+      const { data: tag, error: tagError } = await client.from('tags').select('student_id').eq('school_id', schoolId).eq('token_hash', tokenHash).eq('status', 'active').maybeSingle();
+      if (tagError || !tag) { setCameraError('This is not an active TagIn student QR for this school.'); return; }
+      const assigned = assignments.find((item) => item.student_id === tag.student_id);
+      if (!assigned || !assigned.students?.active) { setCameraError('This student is not assigned to your current route.'); return; }
+      const { data: nextAction, error: nextError } = await client.rpc('get_next_transport_action', { p_school_id: schoolId, p_route_id: selectedRoute, p_student_id: tag.student_id });
+      if (nextError || !nextAction) { setCameraError(nextError?.message || 'The next journey step could not be verified.'); return; }
+      const stopId = nextAction === 'picked_up' ? assigned.pickup_stop_id : nextAction === 'dropped_off_at_home' ? assigned.dropoff_stop_id : null;
+      const { error: saveError } = await client.rpc('record_transport_event', { p_school_id: schoolId, p_route_id: selectedRoute, p_student_id: tag.student_id, p_event_type: nextAction, p_stop_id: stopId, p_note: null });
+      if (saveError) { setCameraError(saveError.message || 'The transport scan could not be saved.'); return; }
+      const labels: Record<string, string> = { picked_up: 'Picked up at home', arrived_at_school: 'Dropped off at school', boarded_at_school: 'Boarded bus at school', dropped_off_at_home: 'Dropped off at home' };
+      setNotice((assigned.students.full_name || 'Student') + ' · ' + (labels[nextAction] || 'Journey updated'));
+      await loadAssignments(selectedRoute);
+    } catch { setCameraError('The QR code could not be verified. Please try again.'); }
+  }
+
+  useEffect(() => {
+    if (mode !== 'driver' || !scanActive) return;
+    let alive = true; let frame = 0; let stream: MediaStream | null = null; let detector: QRDetector | null = null; let busyFrame = false;
+    const Detector = (window as Window & { BarcodeDetector?: QRDetectorConstructor }).BarcodeDetector;
+    async function startCamera() {
+      if (!Detector) { setCameraError('QR scanning is not supported here. Please use an updated Chrome browser on Android.'); return; }
+      if (!navigator.mediaDevices?.getUserMedia) { setCameraError('Camera access requires the secure TagIn website.'); return; }
+      try {
+        stream = await navigator.mediaDevices.getUserMedia({ audio: false, video: { facingMode: { ideal: 'environment' } } });
+        if (!alive) { stream.getTracks().forEach((track) => track.stop()); return; }
+        if (!videoRef.current) return;
+        videoRef.current.srcObject = stream; await videoRef.current.play(); detector = new Detector({ formats: ['qr_code'] });
+        const scanFrame = async () => {
+          if (!alive || !detector || !videoRef.current || busyFrame) return;
+          busyFrame = true;
+          try { const codes = await detector.detect(videoRef.current); if (alive && codes.length && codes[0].rawValue) { alive = false; setScanActive(false); void resolveDriverQr(codes[0].rawValue); } }
+          catch { /* Ignore transient camera frame errors. */ }
+          finally { busyFrame = false; }
+          if (alive) frame = requestAnimationFrame(scanFrame);
+        };
+        frame = requestAnimationFrame(scanFrame);
+      } catch (cameraException) {
+        setCameraError(cameraException instanceof Error && cameraException.name === 'NotAllowedError' ? 'Camera permission was denied. Allow camera access in your browser settings.' : 'The camera could not be opened. Check that another app is not using it.');
+      }
+    }
+    void startCamera();
+    return () => { alive = false; cancelAnimationFrame(frame); stream?.getTracks().forEach((track) => track.stop()); if (videoRef.current) videoRef.current.srcObject = null; };
+  }, [mode, scanActive]);
+
+  const latestEvent = (id: string) => events.find((e) => e.student_id === id && ['picked_up','arrived_at_school','boarded_at_school','dropped_off_at_home','dropped_off'].includes(e.event_type));
   const isAdmin = mode === 'admin';
   return <section className="transport-workspace">
     <div className="transport-heading">
@@ -154,7 +218,7 @@ export function TransportWorkspace({ client, schoolId, schoolName, mode, members
           <div className="transport-route-summary"><strong>{activeRoute.name}</strong><span>{activeRoute.direction} · {activeRoute.transport_vehicles?.registration_number || vehicles.find(v=>v.id===activeRoute.vehicle_id)?.registration_number || 'No vehicle selected'}</span></div>
           <div className="transport-setup-grid">
             <form onSubmit={saveStop}><h3><MapPin size={16}/> Add route stop</h3><label>Stop name</label><input value={stopName} onChange={e=>setStopName(e.target.value)} placeholder="e.g. Admiralty Way" required maxLength={120}/><label>Scheduled time (optional)</label><input type="time" value={stopTime} onChange={e=>setStopTime(e.target.value)}/><button className="secondary-button" disabled={busy}>Add stop</button></form>
-            <form onSubmit={assignDriver}><h3><ShieldCheck size={16}/> Assign driver</h3><label>Active bus staff</label><select value={driverId} onChange={e=>setDriverId(e.target.value)} required><option value="">Select driver</option>{drivers.map(d=><option key={d.id} value={d.id}>{d.profiles?.full_name || d.user_id}</option>)}</select><button className="secondary-button" disabled={busy}>Assign driver</button></form>
+            <form onSubmit={e=>void assignCrew(e,'driver')}><h3><ShieldCheck size={16}/> Assign driver</h3><label>Active bus staff</label><select value={driverId} onChange={e=>setDriverId(e.target.value)} required><option value="">Select driver</option>{drivers.map(d=><option key={d.id} value={d.id}>{d.profiles?.full_name || d.user_id}</option>)}</select><button className="secondary-button" disabled={busy}>Assign driver</button></form><form onSubmit={e=>void assignCrew(e,'assistant')}><h3><Users size={16}/> Assign bus assistant</h3><label>Active bus staff</label><select value={assistantId} onChange={e=>setAssistantId(e.target.value)} required><option value="">Select assistant</option>{drivers.map(d=><option key={d.id} value={d.id}>{d.profiles?.full_name || d.user_id}</option>)}</select><button className="secondary-button" disabled={busy}>Assign assistant</button></form>
             <form onSubmit={assignStudent}><h3><Users size={16}/> Add student to route</h3><label>Active student</label><select value={studentId} onChange={e=>setStudentId(e.target.value)} required><option value="">Select student</option>{students.map(s=><option key={s.id} value={s.id}>{s.full_name}{s.class_name ? ' · '+s.class_name : ''}</option>)}</select><label>Pickup stop</label><select value={pickupStopId} onChange={e=>setPickupStopId(e.target.value)}><option value="">Not set</option>{routeStops.map(s=><option key={s.id} value={s.id}>{s.stop_order}. {s.stop_name}</option>)}</select><label>Drop-off stop</label><select value={dropoffStopId} onChange={e=>setDropoffStopId(e.target.value)}><option value="">Not set</option>{routeStops.map(s=><option key={s.id} value={s.id}>{s.stop_order}. {s.stop_name}</option>)}</select><button className="secondary-button" disabled={busy}>Assign student</button></form>
           </div>
           <div className="transport-lists-grid"><div><h3>Stops ({routeStops.length})</h3>{routeStops.map(s=><div className="transport-list-row" key={s.id}><span>{s.stop_order}. {s.stop_name}</span><small>{s.scheduled_time?.slice(0,5) || 'Time not set'}</small></div>)}</div><div><h3>Assigned students ({assignments.length})</h3>{assignments.map(a=><div className="transport-list-row" key={a.id}><span>{a.students?.full_name || 'Student'}</span><small>{a.students?.class_name || 'Class not set'}</small></div>)}</div></div>
@@ -162,14 +226,19 @@ export function TransportWorkspace({ client, schoolId, schoolName, mode, members
       </div>
       <div className="transport-panel"><h2>Vehicles and routes</h2><div className="transport-lists-grid"><div><h3>Vehicles</h3>{vehicles.map(v=><div className="transport-list-row" key={v.id}><span>{v.registration_number} · {v.vehicle_name || 'School vehicle'}</span><small>{v.capacity} seats · {v.active?'Active':'Inactive'}</small></div>)}{!vehicles.length&&<p className="muted">No vehicles registered yet.</p>}</div><div><h3>Routes</h3>{routes.map(r=><div className="transport-list-row" key={r.id}><span>{r.name}</span><small>{r.direction} · {r.active?'Active':'Inactive'}</small></div>)}{!routes.length&&<p className="muted">No routes created yet.</p>}</div></div></div>
     </> : <>
-      {routes.length===0 ? <div className="transport-panel transport-empty"><BusFront size={28}/><h2>No journeys assigned</h2><p>Your school administrator has not assigned a route to your driver account yet.</p></div> : <>
-        <div className="transport-panel"><div className="transport-panel-title"><div><h2>Assigned journey</h2><p>Only routes assigned to your account appear here.</p></div><select aria-label="Select assigned route" value={selectedRoute} onChange={e=>setSelectedRoute(e.target.value)}>{routes.map(r=><option key={r.id} value={r.id}>{r.name}</option>)}</select></div>
+      {routes.length===0 ? <div className="transport-panel transport-empty"><BusFront size={28}/><h2>No journeys assigned</h2><p>Your school administrator has not assigned you as a driver or bus assistant yet.</p></div> : <>
+        <div className="transport-panel">
+          <div className="transport-panel-title"><div><h2>Today's assigned route</h2><p>Only students assigned to this bus appear here.</p></div><select aria-label="Select assigned route" value={selectedRoute} onChange={e=>setSelectedRoute(e.target.value)}>{routes.map(r=><option key={r.id} value={r.id}>{r.name}</option>)}</select></div>
           <div className="transport-route-summary"><strong>{activeRoute?.name}</strong><span>{activeRoute?.transport_vehicles?.registration_number || 'Vehicle details'} · {activeRoute?.direction}</span></div>
           <div className="transport-stops-strip">{routeStops.map(s=><span key={s.id}><MapPin size={13}/>{s.stop_order}. {s.stop_name}</span>)}</div>
-          <div className="transport-note-field"><label>Journey note (optional)</label><input value={note} onChange={e=>setNote(e.target.value)} placeholder="Add a short note for this update" maxLength={500}/></div>
-          <div className="transport-driver-list">{assignments.map(a=>{const last=latestEvent(a.student_id);return <article className="transport-student-row" key={a.id}><div className="transport-student-avatar">{(a.students?.full_name||'S').split(' ').map(x=>x[0]).slice(0,2).join('')}</div><div className="transport-student-info"><strong>{a.students?.full_name||'Student'}</strong><span>{a.students?.class_name||'Class not set'}</span><small>{last?last.event_type.replace('_',' ')+' · '+stamp(last.created_at):'No journey update today'}</small></div><div className="transport-student-actions"><button type="button" className="transport-pickup" disabled={busy} onClick={()=>void recordEvent('picked_up',a)}>Picked up</button><button type="button" className="transport-dropoff" disabled={busy} onClick={()=>void recordEvent('dropped_off',a)}>Dropped off</button><button type="button" className="transport-missed" disabled={busy} onClick={()=>void recordEvent('missed',a)}>Missed</button><button type="button" className="transport-missed" disabled={busy} onClick={()=>void recordEvent('incident',a)}>Incident</button></div></article>})}{assignments.length===0&&<div className="student-empty">No students are assigned to this route yet.</div>}</div>
+          <div className="transport-driver-safety"><ShieldCheck size={17}/><span>Use the scanner only when the bus is safely stopped. If you have an assistant, let them scan while you drive.</span></div>
+          {scanActive ? <div className="transport-camera-panel"><div className="transport-camera-heading"><strong>Scan student QR</strong><button type="button" className="icon-button" onClick={()=>setScanActive(false)} aria-label="Close scanner"><X size={18}/></button></div><div className="transport-camera-stage"><video ref={videoRef} autoPlay muted playsInline/><div className="transport-camera-frame"/></div><p className="muted">Hold the student's TagIn QR inside the frame.</p>{cameraError && <p className="form-error" role="alert">{cameraError}</p>}</div> : <div className="transport-scan-action"><button type="button" className="transport-scan-button" disabled={!activeRoute || busy} onClick={()=>{setCameraError('');setScanActive(true);}}><Camera size={25}/><span>Scan student</span><small>TagIn chooses the correct journey step automatically</small></button>{cameraError && <p className="form-error" role="alert">{cameraError}</p>}</div>}
+          <div className="transport-driver-list"><div className="transport-list-heading"><h3>Students on this route</h3><span>{assignments.length} assigned</span></div>
+            {assignments.map(a=>{const last=latestEvent(a.student_id);const labels:Record<string,string>={picked_up:'Picked up at home',arrived_at_school:'Dropped off at school',boarded_at_school:'Boarded at school',dropped_off_at_home:'Dropped off at home',dropped_off:'Dropped off'};return <article className="transport-student-row" key={a.id}><div className="transport-student-avatar">{(a.students?.full_name||'S').split(' ').map(x=>x[0]).slice(0,2).join('')}</div><div className="transport-student-info"><strong>{a.students?.full_name||'Student'}</strong><span>{a.students?.class_name||'Class not set'}</span><small>{last?labels[last.event_type]+' · '+stamp(last.created_at):'Waiting for pickup'}</small></div></article>;})}
+            {assignments.length===0&&<div className="student-empty">No students are assigned to this route yet.</div>}
+          </div>
         </div>
-        <div className="transport-panel"><h2><Clock3 size={18}/> Journey activity</h2>{events.slice(0,25).map(e=><div className="transport-list-row" key={e.id}><span>{assignments.find(a=>a.student_id===e.student_id)?.students?.full_name || 'Student'} · {e.event_type.replace('_',' ')}</span><small>{stamp(e.created_at)}</small></div>)}{!events.length&&<p className="muted">No journey events have been recorded yet.</p>}</div>
+        <div className="transport-panel"><h2><Clock3 size={18}/> Recent journey activity</h2>{events.slice(0,20).map(e=><div className="transport-list-row" key={e.id}><span>{assignments.find(a=>a.student_id===e.student_id)?.students?.full_name || 'Student'} · {e.event_type.replaceAll('_',' ')}</span><small>{stamp(e.created_at)}</small></div>)}{!events.length&&<p className="muted">No journey events have been recorded yet.</p>}</div>
       </>}
     </>}
     <p className="transport-footnote"><CheckCircle2 size={14}/> Transport activity is separate from school attendance. A bus pickup never checks a student into school.</p>
