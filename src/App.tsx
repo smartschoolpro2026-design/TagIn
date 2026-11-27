@@ -367,8 +367,7 @@ export default function App() {
 
 function Brand() {
   return <a className="brand" href="#top" aria-label="TagIn home">
-    <img className="brand-logo" src="/tagin-logo.svg" alt="" />
-    <span>TagIn</span>
+    <img className="brand-logo" src="/tagin-logo.svg" alt="TagIn" />
   </a>;
 }
 function WorkspaceCard({ icon, title, description, actionLabel, onAction }: { icon: ReactNode; title: string; description: string; actionLabel?: string; onAction?: () => void }) {
