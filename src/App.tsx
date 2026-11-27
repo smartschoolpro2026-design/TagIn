@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState, type FormEvent, type ReactNode } from 'react';
+import { useEffect, useMemo, useRef, useState, type FormEvent, type ReactNode } from 'react';
 import {
   ArrowRight, Award, Bell, BusFront, CalendarDays, CheckCircle2, ClipboardList, GraduationCap, HeartHandshake, ShieldCheck,
   Eye, EyeOff, LogOut, QrCode, Users,
@@ -102,6 +102,48 @@ export default function App() {
     void loadAccount();
     return () => { alive = false; };
   }, [session]);
+
+  const navigationReady = useRef(false);
+  const restoringNavigation = useRef(false);
+  const currentView = !session ? (showSignIn ? 'signin' : 'home') : showSchoolManagement ? 'school-management' : activeWorkspace || 'dashboard';
+
+  useEffect(() => {
+    // Keep a same-page history entry so Android's hardware Back button is
+    // handled by TagIn instead of immediately leaving the app on first entry.
+    if (!navigationReady.current) {
+      const rootState = { taginNavigation: true, view: currentView, guard: true };
+      window.history.replaceState(rootState, '', window.location.href);
+      window.history.pushState(rootState, '', window.location.href);
+      navigationReady.current = true;
+      return;
+    }
+    if (restoringNavigation.current) {
+      restoringNavigation.current = false;
+      return;
+    }
+    window.history.pushState({ taginNavigation: true, view: currentView }, '', window.location.href);
+  }, [currentView]);
+
+  useEffect(() => {
+    const handleBack = (event: PopStateEvent) => {
+      const state = event.state as { taginNavigation?: boolean; view?: string; guard?: boolean } | null;
+      if (!state?.taginNavigation || state.guard) {
+        // At TagIn's root screen: keep the user in the app rather than
+        // allowing Android Back to close the tab immediately.
+        const rootState = { taginNavigation: true, view: currentView, guard: true };
+        window.history.pushState(rootState, '', window.location.href);
+        return;
+      }
+      restoringNavigation.current = true;
+      const view = state.view ?? 'home';
+      setShowSchoolManagement(view === 'school-management');
+      setActiveWorkspace(view === 'dashboard' || view === 'home' || view === 'signin' || view === 'school-management' ? '' : view as typeof activeWorkspace);
+      if (view === 'signin') setShowSignIn(true);
+      else if (view === 'home') setShowSignIn(false);
+    };
+    window.addEventListener('popstate', handleBack);
+    return () => window.removeEventListener('popstate', handleBack);
+  }, [currentView]);
 
   const selectedMembership = useMemo(
     () => memberships.find((membership) => membership.school_id === schoolId) ?? memberships[0],
