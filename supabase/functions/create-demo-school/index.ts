@@ -176,27 +176,29 @@ Deno.serve(async (req: Request) => {
       .upsert({ school_id: schoolId, registration_number: "DEMO-TAGIN-01", vehicle_name: "TagIn School Bus", capacity: 18, active: true }, { onConflict: "school_id,registration_number" })
       .select("id").single();
     if (vehicleError || !vehicle) throw new Error("Could not set up the demo bus.");
-    const { data: route, error: routeError } = await admin.from("transport_routes")
-      .upsert({ school_id: schoolId, name: "Ikeja Demo Route", direction: "both", vehicle_id: vehicle.id, active: true }, { onConflict: "school_id,name" })
-      .select("id").single();
-    if (routeError || !route) throw new Error("Could not set up the demo bus route.");
+    let { data: route } = await admin.from("transport_routes").select("id").eq("school_id", schoolId).eq("name", "Ikeja Demo Route").maybeSingle();
+    if (!route) {
+      const createdRoute = await admin.from("transport_routes").insert({ school_id: schoolId, name: "Ikeja Demo Route", direction: "both", vehicle_id: vehicle.id, active: true }).select("id").single();
+      if (createdRoute.error || !createdRoute.data) throw new Error("Could not set up the demo bus route.");
+      route = createdRoute.data;
+    }
     const stopSpecs = [{ stop_name: "Ikeja Demo Estate", stop_order: 1, scheduled_time: "07:00" }, { stop_name: "TagIn Demo Academy", stop_order: 2, scheduled_time: "07:40" }];
     const stops: any[] = [];
     for (const spec of stopSpecs) {
-      const { data, error } = await admin.from("transport_stops").upsert({ school_id: schoolId, route_id: route.id, ...spec }, { onConflict: "school_id,route_id,stop_order" }).select("id").single();
+      const { data, error } = await admin.from("transport_stops").upsert({ school_id: schoolId, route_id: route.id, ...spec }, { onConflict: "route_id,stop_order" }).select("id").single();
       if (error || !data) throw new Error("Could not set up the demo route stops.");
       stops.push(data);
     }
     for (const [key, assignmentType] of [["driver", "driver"], ["assistant", "assistant"]] as const) {
       const { error } = await admin.from("transport_route_drivers").upsert({
         school_id: schoolId, route_id: route.id, membership_id: people[key].membershipId, assignment_type: assignmentType, active: true,
-      }, { onConflict: "school_id,route_id,membership_id" });
+      }, { onConflict: "route_id,membership_id" });
       if (error) throw new Error("Could not assign the demo bus crew.");
     }
     for (const student of students.filter(s => s.usesBus)) {
       const { error } = await admin.from("transport_route_students").upsert({
         school_id: schoolId, route_id: route.id, student_id: student.id, pickup_stop_id: stops[0].id, dropoff_stop_id: stops[1].id, active: true,
-      }, { onConflict: "school_id,route_id,student_id" });
+      }, { onConflict: "route_id,student_id" });
       if (error) throw new Error("Could not assign a demo student to the bus route.");
     }
 
