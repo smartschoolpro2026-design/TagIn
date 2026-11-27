@@ -195,3 +195,9 @@
  .tagin-qr-card{width:100%;max-width:none;border-radius:0;box-shadow:none}
  .tagin-qr-close,.tagin-qr-actions{display:none!important}
 }
+
+/* Compact QR scanner action in the workspace header */
+.workspace-topbar .qr-header-button{width:48px;height:48px;min-width:48px;border-radius:15px;color:#185440;background:#eaf4ed;border:1px solid #d5e6da;display:grid;place-items:center}
+.workspace-topbar .qr-header-button:hover{background:#dceee2;border-color:#b8d8c4}
+.workspace-topbar .account-actions{gap:12px}
+@media(max-width:700px){.workspace-topbar .qr-header-button{width:46px;height:46px;min-width:46px;border-radius:14px}}
