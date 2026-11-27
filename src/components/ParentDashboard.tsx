@@ -6,6 +6,7 @@ declare global { interface Window { QRCode?:QRCodeConstructor } }
 import { Award,Bell,BusFront,CalendarDays,ChevronDown,GraduationCap,HeartHandshake,Plus,School,ShieldCheck,Upload,UserRound } from 'lucide-react';
 type Child={id:string;full_name:string;class_name:string|null;level:string|null;school:string;schoolId:string};
 type Pickup={id:string;full_name:string;relationship:string|null;phone:string|null;photo_path:string|null;expires_at:string|null;used_at:string|null;photoUrl?:string};
+type TransportUpdate={id:string;event_type:string;created_at:string};
 type Props={client:SupabaseClient;userId:string;parentName:string;onOpen:(view:'scores-parent'|'timetable-parent'|'family')=>void};
 export function ParentDashboard({client,userId,parentName,onOpen}:Props){
  const [children,setChildren]=useState<Child[]>([]),[selectedId,setSelectedId]=useState('');
@@ -13,6 +14,7 @@ export function ParentDashboard({client,userId,parentName,onOpen}:Props){
  const [qrToken,setQrToken]=useState(''),[qrLoading,setQrLoading]=useState(false),[qrError,setQrError]=useState('');
  const qrTarget=useRef<HTMLDivElement|null>(null);
  const [pickups,setPickups]=useState<Pickup[]>([]),[pickupLoading,setPickupLoading]=useState(false);
+ const [transportUpdates,setTransportUpdates]=useState<TransportUpdate[]>([]),[transportLoading,setTransportLoading]=useState(false);
  const [showPickupForm,setShowPickupForm]=useState(false),[pickupName,setPickupName]=useState(''),[relationship,setRelationship]=useState(''),[phone,setPhone]=useState('');
  const [photo,setPhoto]=useState<File|null>(null),[photoPreview,setPhotoPreview]=useState(''),[savingPickup,setSavingPickup]=useState(false),[pickupError,setPickupError]=useState('');
  const [pickupNotice,setPickupNotice]=useState('');
@@ -20,6 +22,20 @@ export function ParentDashboard({client,userId,parentName,onOpen}:Props){
  const child=useMemo(()=>children.find(x=>x.id===selectedId)??children[0],[children,selectedId]);
  useEffect(()=>{if(!child?.id){setQrToken('');return;}let alive=true;async function issuePass(){setQrLoading(true);setQrError('');setQrToken('');const {data,error:e}=await client.functions.invoke('parent-student-qr',{body:{studentId:child.id}});if(!alive)return;if(e||!data?.success||typeof data.token!=='string')setQrError(data?.error||'The student QR pass could not be loaded. Please refresh.');else setQrToken(data.token);setQrLoading(false);}void issuePass();return()=>{alive=false;};},[client,child?.id]);
  useEffect(()=>{if(!qrToken||!qrTarget.current)return;qrTarget.current.innerHTML='';if(!window.QRCode){setQrError('The QR display could not load. Please refresh.');return;}try{new window.QRCode(qrTarget.current,{text:'TAGIN:'+qrToken,width:220,height:220,colorDark:'#123f30',colorLight:'#ffffff',correctLevel:window.QRCode.CorrectLevel?.M??0});}catch{setQrError('The student QR code could not be displayed.');}return()=>{if(qrTarget.current)qrTarget.current.innerHTML='';};},[qrToken]);
+ async function loadTransportUpdates(studentId:string){
+  setTransportLoading(true);
+  const {data,error:e}=await client.from('transport_events').select('id,event_type,created_at').eq('student_id',studentId).order('created_at',{ascending:false}).limit(8);
+  if(e)setTransportUpdates([]);else setTransportUpdates((data??[]) as TransportUpdate[]);
+  setTransportLoading(false);
+ }
+ useEffect(()=>{
+  if(!child?.id){setTransportUpdates([]);return;}
+  void loadTransportUpdates(child.id);
+  const channel=client.channel('parent-transport-'+child.id)
+   .on('postgres_changes',{event:'INSERT',schema:'public',table:'transport_events',filter:'student_id=eq.'+child.id},()=>{void loadTransportUpdates(child.id);})
+   .subscribe();
+  return()=>{void client.removeChannel(channel);};
+ },[client,child?.id]);
  async function loadPickups(studentId:string){setPickupLoading(true);const {data,error:e}=await client.from('authorized_collectors').select('id,full_name,relationship,phone,photo_path,expires_at,used_at').eq('student_id',studentId).eq('created_by',userId).order('created_at',{ascending:false}).limit(8);if(e){setPickupError('Pickup permissions could not be loaded.');setPickups([]);}else{const rows=(data??[]) as Pickup[];const withPhotos=await Promise.all(rows.map(async p=>{if(!p.photo_path)return p;const {data:signed}=await client.storage.from('tagin-pickup-photos').createSignedUrl(p.photo_path,900);return {...p,photoUrl:signed?.signedUrl};}));setPickups(withPhotos);}setPickupLoading(false);}
  useEffect(()=>{if(child?.id){void loadPickups(child.id);setShowPickupForm(false);}},[child?.id,userId]);
  function onPhotoChange(e:ChangeEvent<HTMLInputElement>){const file=e.target.files?.[0]??null;setPickupError('');if(!file){setPhoto(null);setPhotoPreview('');return;}if(!['image/jpeg','image/png','image/webp'].includes(file.type)||file.size>5*1024*1024){setPickupError('Choose a JPG, PNG or WEBP photo under 5 MB.');e.target.value='';return;}setPhoto(file);setPhotoPreview(URL.createObjectURL(file));}
@@ -33,6 +49,10 @@ export function ParentDashboard({client,userId,parentName,onOpen}:Props){
    <section className="parent-school-strip"><span><School size={17}/></span><div><small>SCHOOL</small><strong>{child.school}</strong></div></section>
    <section className="parent-child-panel"><div className="parent-child-heading"><div><p className="eyebrow">STUDENT WORKSPACE</p><h2>{child.full_name}</h2><p>{child.class_name??child.level??'Student'}</p></div>{children.length>1&&<label className="parent-child-select"><span>Child</span><select value={child.id} onChange={e=>setSelectedId(e.target.value)}>{children.map(c=><option key={c.id} value={c.id}>{c.full_name}</option>)}</select><ChevronDown size={15}/></label>}</div>
     <div className="parent-qr-panel parent-qr-live"><div className="parent-qr-display">{qrToken?<div ref={qrTarget} className="parent-qr-code"/>:<div className="parent-qr-placeholder"><ShieldCheck size={34}/></div>}</div><div><strong>Student QR pass</strong><p>Optional parent QR for quick student identification. Your child’s bag tag works too; staff will confirm who collected them.</p>{qrLoading&&<span>Preparing your child’s secure pass…</span>}{qrError&&<span className="parent-qr-error" role="alert">{qrError}</span>}{qrToken&&!qrError&&<span>Active student pass · Ready to scan</span>}</div></div>
+   </section>
+   <section className="parent-transport-updates">
+    <div className="parent-transport-heading"><div><p className="eyebrow">LIVE TRANSPORT</p><h2>Bus journey updates</h2><p>Updates appear here as the driver or assistant scans your child.</p></div><BusFront size={23}/></div>
+    {transportLoading?<p className="muted">Loading transport updates…</p>:transportUpdates.length===0?<p className="muted">No bus journey updates yet.</p>:<div className="parent-transport-list">{transportUpdates.map(item=>{const labels:Record<string,string>={picked_up:'Picked up from home',arrived_at_school:'Arrived at school by bus',boarded_at_school:'Boarded the school bus',dropped_off_at_home:'Dropped off at home',dropped_off:'Dropped off',missed:'Marked as missed',incident:'Transport incident reported'};return <article className="parent-transport-row" key={item.id}><span className="parent-transport-icon"><BusFront size={17}/></span><div><strong>{labels[item.event_type]||'Transport update'}</strong><small>{new Date(item.created_at).toLocaleString([],{dateStyle:'medium',timeStyle:'short'})}</small></div></article>;})}</div>}
    </section>
    <section className="parent-pickup-section"><div className="parent-pickup-heading"><div><p className="eyebrow">SAFE COLLECTION</p><h2>Assign someone to pick up</h2><p>Add the name and photo of the person authorised to collect {child.full_name}. They do not need a phone or QR code.</p></div><button className="parent-pickup-add" type="button" onClick={()=>{setPickupError('');setPickupNotice('');setShowPickupForm(v=>!v);}}><Plus size={17}/>{showPickupForm?'Close':'Assign pickup'}</button></div>
     {pickupError&&<p className="parent-qr-error" role="alert">{pickupError}</p>}{pickupNotice&&<p className="student-notice" role="status">{pickupNotice}</p>}
