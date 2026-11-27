@@ -486,3 +486,15 @@
 .transport-driver-list>.transport-list-heading span{color:var(--muted,#667085);font-size:12px}
 .transport-driver-list .transport-student-row{justify-content:flex-start}
 @media(max-width:600px){.transport-scan-button{min-height:116px}.transport-camera-stage{aspect-ratio:3/4}.transport-driver-safety{font-size:12px}}
+
+
+.parent-transport-updates{margin:18px 0;padding:18px;border:1px solid #dfe9e3;border-radius:16px;background:#fff}
+.parent-transport-heading{display:flex;align-items:flex-start;justify-content:space-between;gap:12px;color:#245b43}
+.parent-transport-heading h2{margin:3px 0 5px;color:#173f32;font-size:19px}
+.parent-transport-heading p:last-child{margin:0;color:#66786f;font-size:13px;line-height:1.45}
+.parent-transport-list{display:grid;gap:0;margin-top:12px}
+.parent-transport-row{display:flex;align-items:center;gap:11px;padding:12px 0;border-top:1px solid #edf1ee}
+.parent-transport-icon{display:grid;place-items:center;width:36px;height:36px;flex:0 0 auto;border-radius:11px;background:#eaf5ee;color:#236b4c}
+.parent-transport-row div{display:grid;gap:3px}
+.parent-transport-row strong{color:#244336;font-size:13px}
+.parent-transport-row small{color:#718078;font-size:11px}
