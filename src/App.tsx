@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState, type FormEvent, type ReactNode } from 'react';
 import {
-  ArrowRight, Award, Bell, BusFront, CalendarDays, CheckCircle2, ClipboardList, GraduationCap, HeartHandshake, ShieldCheck,
+  ArrowRight, Award, Bell, BookOpen, BusFront, CalendarDays, CheckCircle2, ClipboardList, GraduationCap, HeartHandshake, ShieldCheck,
   Eye, EyeOff, LogOut, QrCode, Users,
 } from 'lucide-react';
 import type { Session } from '@supabase/supabase-js';
