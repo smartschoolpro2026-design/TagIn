@@ -217,8 +217,8 @@ export function ActivityAuditWorkspace({ client, session, schoolId, schoolName, 
     const headers = ['Date and time','School','Person','Activity','Performed by','Class','What changed','Details'];
     const lines = filtered.map(row => [
       new Date(row.created_at).toLocaleString(), row.school_id ? schools[row.school_id] ?? 'School' : 'Platform',
-      row.actor_user_id ? actors[row.actor_user_id] ?? 'Account name unavailable' : (typeof row.metadata?.attempted_name === 'string' ? 'Failed sign-in attempt for ' + row.metadata.attempted_name : 'System / automated action'),
-      personFor(row, students, tagStudents), activityTitle(row), row.actor_user_id ? actors[row.actor_user_id] ?? 'Name not available' : (row.metadata?.historical_unattributed ? 'Creator not recorded' : 'System / automated action'), studentFor(row, students, tagStudents)?.className ?? '', changedSummary(row), safeDetails(row, students, tagStudents),
+      personFor(row, students, tagStudents), activityTitle(row), row.actor_user_id ? actors[row.actor_user_id] ?? 'Name not available' : (row.metadata?.historical_unattributed ? 'Creator not recorded' : typeof row.metadata?.attempted_name === 'string' ? row.metadata.attempted_name : 'System / automated action'),
+      studentFor(row, students, tagStudents)?.className ?? '', changedSummary(row), safeDetails(row, students, tagStudents),
     ].map(csvCell).join(','));
     const csv = '\uFEFF' + [headers.map(csvCell).join(','), ...lines].join('\r\n');
     const filename = 'tagin-activity-audit-' + new Date().toISOString().slice(0,10) + '.csv';
