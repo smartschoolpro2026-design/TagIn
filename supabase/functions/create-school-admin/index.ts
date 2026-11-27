@@ -90,7 +90,7 @@ Deno.serve(async (request: Request) => {
   }
 
   const { data: school, error: schoolError } = await adminClient
-    .from("schools").select("id,status").eq("id", schoolId).maybeSingle();
+    .from("schools").select("id,name,status").eq("id", schoolId).maybeSingle();
   if (schoolError || !school || school.status !== "active") {
     return jsonResponse(400, { error: "Choose an active school before assigning its administrator." });
   }
@@ -135,6 +135,16 @@ Deno.serve(async (request: Request) => {
     await adminClient.auth.admin.deleteUser(userId);
     return jsonResponse(500, { error: "The school assignment could not be saved. No account was retained." });
   }
+
+  const { error: auditError } = await adminClient.from("audit_logs").insert({
+    school_id: schoolId,
+    actor_user_id: authData.user.id,
+    action: "school_admin.created",
+    entity_type: "school_membership",
+    entity_id: userId,
+    metadata: { administrator_name: fullName, school_name: school.name },
+  });
+  if (auditError) console.error("school administrator audit log insert failed", auditError.message);
 
   return jsonResponse(200, {
     success: true,
