@@ -143,7 +143,7 @@ Deno.serve(async (req: Request) => {
       { name: "Samuel Bello", admission: "TDA-017", className: "Primary 2", parent: "parentB", usesBus: true },
       { name: "Ella Johnson", admission: "TDA-018", className: "Primary 2", parent: "parentA", usesBus: false },
       { name: "James Johnson", admission: "TDA-019", className: "Primary 2", parent: "parentB", usesBus: true },
-      { name: "Mason Okafor", admission: "TDA-020", className: "Primary 2", parent: "parentA", usesBus: true },
+      { name: "Mason Okafor", admission: "TDA-020", className: "Nursery 2", parent: "parentA", usesBus: true },
     ];
     const students: any[] = [];
     for (const spec of studentSpecs) {
