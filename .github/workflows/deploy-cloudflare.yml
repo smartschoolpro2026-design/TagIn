@@ -33,3 +33,4 @@ jobs:
           accountId: 29d87186e44e5f660341e2e5cb428627
           wranglerVersion: "4.168.0"
           command: deploy
+# Deployment pipeline verified after credential refresh.
