@@ -334,3 +334,5 @@
 .audit-human-details strong{display:block;color:#355b43;font-size:12px}
 .audit-human-details p{margin:5px 0 0;overflow-wrap:anywhere}
 .audit-row-copy small{text-transform:capitalize}
+
+.audit-download-actions{display:flex;flex-wrap:wrap;gap:9px;margin-top:10px}.audit-download-actions button{min-height:42px}@media(max-width:700px){.audit-download-actions{flex-direction:column}.audit-download-actions button{width:100%}}
