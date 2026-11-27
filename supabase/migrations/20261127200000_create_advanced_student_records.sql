@@ -42,3 +42,26 @@ using(private.has_school_role(student_incidents.school_id,array['school_admin'::
 with check(private.has_school_role(student_incidents.school_id,array['school_admin'::public.membership_role]) and exists(select 1 from public.students s where s.id=student_incidents.student_id and s.school_id=student_incidents.school_id));
 grant select,insert,update,delete on public.student_profiles to authenticated;
 grant select,insert,update,delete on public.student_incidents to authenticated;
+
+
+create table if not exists public.student_document_records (
+ id uuid primary key default gen_random_uuid(),
+ school_id uuid not null references public.schools(id) on delete cascade,
+ student_id uuid not null references public.students(id) on delete cascade,
+ document_type text not null check(document_type in ('birth_certificate','previous_report','transfer_certificate','identity_record','medical_record','other')),
+ title text not null,
+ reference_number text,
+ issued_on date,
+ expires_on date,
+ notes text,
+ recorded_by uuid references auth.users(id) on delete set null,
+ created_at timestamptz not null default now(),
+ constraint student_document_title_length check(length(trim(title)) between 2 and 160),
+ constraint student_document_notes_length check(notes is null or length(notes)<=2000)
+);
+create index if not exists student_documents_student_idx on public.student_document_records(school_id,student_id,created_at desc);
+alter table public.student_document_records enable row level security;
+create policy student_documents_admin_manage on public.student_document_records for all to authenticated
+using(private.has_school_role(student_document_records.school_id,array['school_admin'::public.membership_role]))
+with check(private.has_school_role(student_document_records.school_id,array['school_admin'::public.membership_role]) and exists(select 1 from public.students s where s.id=student_document_records.student_id and s.school_id=student_document_records.school_id));
+grant select,insert,update,delete on public.student_document_records to authenticated;
