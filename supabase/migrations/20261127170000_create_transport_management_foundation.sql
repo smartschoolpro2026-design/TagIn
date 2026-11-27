@@ -208,6 +208,9 @@ declare
   v_last_event text;
 begin
   if v_user_id is null then raise exception 'Authentication required'; end if;
+  if not exists (select 1 from public.profiles p where p.id = v_user_id and p.is_active) then
+    raise exception 'Active account required';
+  end if;
   if p_event_type not in ('picked_up','dropped_off','missed','incident') then raise exception 'Invalid transport event'; end if;
   if p_note is not null and length(p_note) > 500 then raise exception 'Note is too long'; end if;
 
