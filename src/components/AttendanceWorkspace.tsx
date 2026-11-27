@@ -12,6 +12,7 @@ export function AttendanceWorkspace({client,schoolId,schoolName,actorName,canChe
  const [collector,setCollector]=useState(''),[search,setSearch]=useState(''),[loading,setLoading]=useState(true),[checking,setChecking]=useState(false),[busy,setBusy]=useState(false),[error,setError]=useState(''),[notice,setNotice]=useState('');
  const [scanActive,setScanActive]=useState(startInScanMode),[cameraError,setCameraError]=useState('');
  const [pendingPickup,setPendingPickup]=useState<any|null>(null),[pickupBusy,setPickupBusy]=useState(false);
+ const [pendingStudentRelease,setPendingStudentRelease]=useState<any|null>(null),[parentCollectorName,setParentCollectorName]=useState('');
  const videoRef=useRef<HTMLVideoElement|null>(null);
  useEffect(()=>{
   if(!scanActive)return;
@@ -72,13 +73,44 @@ export function AttendanceWorkspace({client,schoolId,schoolName,actorName,canChe
    const {data:student,error:studentError}=await client.from('students').select('id,full_name,class_name,level').eq('id',tag.student_id).eq('school_id',schoolId).eq('active',true).maybeSingle();
    if(studentError||!student){setCameraError('The QR code does not match an active student in this school.');return;}
    setScanActive(false);
-   await choose(student as Student);
-   setNotice('Student QR code verified. Confirm the attendance action below.');
+   const verifiedStudent=student as Student;
+   const {data:pickupData,error:pickupLookupError}=await client.rpc('preview_student_pickup',{p_school_id:schoolId,p_student_id:verifiedStudent.id});
+   if(pickupLookupError){setCameraError(pickupLookupError.message||'Pickup authorisation could not be loaded.');return;}
+   let photoUrl='';
+   if(pickupData?.has_authorized_collector&&pickupData.photo_path){
+    const {data:signed}=await client.storage.from('tagin-pickup-photos').createSignedUrl(pickupData.photo_path,300);
+    photoUrl=signed?.signedUrl??'';
+   }
+   await choose(verifiedStudent);
+   setParentCollectorName('');
+   setPendingStudentRelease({...verifiedStudent,...pickupData,photoUrl});
+   setNotice('Student bag tag verified. Confirm who is collecting the child before release.');
   }catch{
    setCameraError('The QR code could not be verified. Please try again.');
   }
  }
 
+ async function confirmStudentRelease(asParent:boolean){
+  const pending=pendingStudentRelease;
+  if(!pending||pickupBusy)return;
+  const collectorName=asParent?parentCollectorName.trim():String(pending.collector_name||'').trim();
+  if(!collectorName){setError(asParent?'Enter the parent or guardian’s name.':'The authorised pickup name is missing.');return;}
+  setPickupBusy(true);setError('');setNotice('');
+  const {data,error:e}=await client.rpc('record_student_checkout',{
+   p_school_id:schoolId,p_student_id:pending.id,
+   p_collected_by_type:asParent?'parent':'authorised_pickup',
+   p_collected_by_name:collectorName,
+   p_authorized_collector_id:asParent?null:pending.collector_id
+  });
+  if(e){setError(e.message||'The child’s release could not be recorded.');}
+  else{
+   setPendingStudentRelease(null);setParentCollectorName('');
+   await choose(pending as Student);
+   setNotice(pending.full_name+' has been checked out. Collected by '+collectorName+'.');
+   await refreshRecent();
+  }
+  setPickupBusy(false);
+ }
  async function confirmPickupRelease(){
   if(!pendingPickup||pickupBusy)return;
   setPickupBusy(true);setError('');setNotice('');
@@ -107,6 +139,17 @@ export function AttendanceWorkspace({client,schoolId,schoolName,actorName,canChe
    {!scanActive?<button className="attendance-scan-button" type="button" onClick={()=>{setCameraError('');setScanActive(true);}}><Camera size={18}/> Open QR scanner</button>:<button className="attendance-scan-close" type="button" onClick={()=>setScanActive(false)}><X size={17}/> Close scanner</button>}
    {scanActive&&<div className="attendance-camera-frame"><video ref={videoRef} autoPlay muted playsInline/><div className="attendance-camera-guide"><span/></div><p>Hold the student’s QR code inside the frame.</p></div>}
    {cameraError&&<p className="form-error" role="alert">{cameraError}</p>}
+  {pendingStudentRelease&&<div className="attendance-pickup-verify">
+   <div className="attendance-pickup-photo">{pendingStudentRelease.photoUrl?<img src={pendingStudentRelease.photoUrl} alt={pendingStudentRelease.collector_name}/>:<UserRound size={28}/>}</div>
+   <div className="attendance-pickup-details">
+    <p className="eyebrow">STUDENT BAG TAG VERIFIED</p>
+    <h3>{pendingStudentRelease.full_name}</h3>
+    {pendingStudentRelease.has_authorized_collector?<><p className="attendance-pickup-warning">PARENT-AUTHORISED PICKUP PERSON</p><p><strong>{pendingStudentRelease.collector_name}</strong>{pendingStudentRelease.relationship?' · '+pendingStudentRelease.relationship:''}</p>{pendingStudentRelease.phone&&<p>Phone: {pendingStudentRelease.phone}</p>}<p>Compare the person at the gate with this photo before confirming release.</p><button className="attendance-checkout" type="button" disabled={pickupBusy} onClick={()=>void confirmStudentRelease(false)}>{pickupBusy?'Recording release…':'Confirm authorised person collected'}</button></>:<><p className="attendance-pickup-warning">NO ACTIVE PICKUP PERSON ASSIGNED FOR TODAY</p><p>Only release the child to a parent or guardian after checking their identity.</p></>}
+    <label className="collector-field">Parent or guardian’s full name<input value={parentCollectorName} onChange={e=>setParentCollectorName(e.target.value)} placeholder="Enter parent / guardian name" maxLength={160}/></label>
+    <button className="attendance-checkin" type="button" disabled={pickupBusy||!parentCollectorName.trim()} onClick={()=>void confirmStudentRelease(true)}>{pickupBusy?'Recording release…':'Confirm parent collected'}</button>
+    <button className="attendance-scan-close" type="button" disabled={pickupBusy} onClick={()=>setPendingStudentRelease(null)}>Cancel</button>
+   </div>
+  </div>}
    {pendingPickup&&<div className="attendance-pickup-verify">
     <div className="attendance-pickup-photo">{pendingPickup.photoUrl?<img src={pendingPickup.photoUrl} alt={pendingPickup.collector_name}/>:<UserRound size={28}/>}</div>
     <div className="attendance-pickup-details"><p className="eyebrow">ONE-TIME PICKUP PASS VERIFIED</p><h3>{pendingPickup.collector_name}</h3><p>Collecting: <strong>{pendingPickup.student_name}</strong></p>{pendingPickup.relationship&&<p>Relationship: {pendingPickup.relationship}</p>}{pendingPickup.phone&&<p>Phone: {pendingPickup.phone}</p>}<p className="attendance-pickup-warning">Check the photo and identity before releasing the student. Confirming will check the child out and permanently use this QR.</p><button className="attendance-checkout" type="button" disabled={pickupBusy} onClick={()=>void confirmPickupRelease()}>{pickupBusy?'Completing release…':'Confirm child release'}</button><button className="attendance-scan-close" type="button" disabled={pickupBusy} onClick={()=>setPendingPickup(null)}>Cancel</button></div>
