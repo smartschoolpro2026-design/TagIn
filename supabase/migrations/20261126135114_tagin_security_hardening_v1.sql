@@ -1,8 +1,7 @@
--- TagIn security hardening v1
--- Applied to Supabase project wlkqsivehfwogdquodxx on 2026-11-26.
-
+-- Remove privileges that bypass or are unnecessary for row-level access controls.
 REVOKE TRUNCATE, REFERENCES, TRIGGER ON ALL TABLES IN SCHEMA public FROM anon, authenticated;
 
+-- Tables created by the postgres role must be explicitly exposed to the Data API.
 ALTER DEFAULT PRIVILEGES FOR ROLE postgres IN SCHEMA public
   REVOKE ALL ON TABLES FROM anon, authenticated;
 ALTER DEFAULT PRIVILEGES FOR ROLE postgres IN SCHEMA public
@@ -10,8 +9,10 @@ ALTER DEFAULT PRIVILEGES FOR ROLE postgres IN SCHEMA public
 ALTER DEFAULT PRIVILEGES FOR ROLE postgres IN SCHEMA public
   REVOKE EXECUTE ON FUNCTIONS FROM PUBLIC, anon, authenticated;
 
+-- Authenticated users already have explicit execute permission for this private helper.
 REVOKE EXECUTE ON FUNCTION private.is_guardian_of_student(uuid, uuid) FROM PUBLIC;
 
+-- A parent-created one-off collector is valid only for the current school day.
 DROP POLICY IF EXISTS collectors_parent_insert_one_day ON public.authorized_collectors;
 CREATE POLICY collectors_parent_insert_one_day
 ON public.authorized_collectors
