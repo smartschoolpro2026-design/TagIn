@@ -1,4 +1,5 @@
 -- Let each teacher read attendance only for students in classes assigned to that teacher.
+drop policy if exists "scan_events_assigned_teacher_read" on public.scan_events;
 create policy "scan_events_assigned_teacher_read"
 on public.scan_events
 for select
@@ -21,5 +22,17 @@ using (
   )
 );
 
--- Enable realtime delivery for new attendance records.
-alter publication supabase_realtime add table public.scan_events;
+-- Enable realtime delivery for new attendance records, safely if not already published.
+do $$
+begin
+  if not exists (
+    select 1
+    from pg_publication_tables
+    where pubname = 'supabase_realtime'
+      and schemaname = 'public'
+      and tablename = 'scan_events'
+  ) then
+    alter publication supabase_realtime add table public.scan_events;
+  end if;
+end
+$$;
