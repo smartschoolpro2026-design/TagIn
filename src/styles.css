@@ -465,3 +465,24 @@
 .tagin-bulk-reference{display:block;margin:0 0 8px;color:#153f32;font-size:18px;letter-spacing:.08em;font-variant-numeric:tabular-nums}
 .tagin-qr-card .tagin-qr-image{margin:18px auto 8px}
 .tagin-qr-card .tagin-bulk-reference{font-size:21px;margin-bottom:16px}
+
+
+/* Driver and bus-assistant scan-first workspace */
+.transport-driver-safety{display:flex;align-items:flex-start;gap:10px;margin:16px 0;padding:13px 14px;border:1px solid #dbe8df;border-radius:12px;background:#f4faf6;color:#285744;font-size:13px;line-height:1.45}
+.transport-driver-safety svg{flex:0 0 auto}
+.transport-scan-action{display:flex;justify-content:center;padding:18px 0}
+.transport-scan-button{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px;width:100%;min-height:126px;padding:20px;border:0;border-radius:16px;background:#176b4b;color:#fff;font:inherit;cursor:pointer}
+.transport-scan-button span{font-size:20px;font-weight:800}
+.transport-scan-button small{font-size:12px;color:#e0f3e8}
+.transport-scan-button:disabled{opacity:.55;cursor:not-allowed}
+.transport-camera-panel{margin:14px 0;padding:14px;border:1px solid #dce7df;border-radius:16px;background:#f8fbf9}
+.transport-camera-heading{display:flex;align-items:center;justify-content:space-between;margin-bottom:12px}
+.transport-camera-stage{position:relative;overflow:hidden;aspect-ratio:4/3;max-height:390px;border-radius:14px;background:#101a15}
+.transport-camera-stage video{display:block;width:100%;height:100%;object-fit:cover}
+.transport-camera-frame{position:absolute;inset:17%;border:3px solid #7ce0a9;border-radius:20px;box-shadow:0 0 0 999px #06120a40;pointer-events:none}
+.transport-driver-list{margin-top:18px}
+.transport-driver-list>.transport-list-heading{display:flex;align-items:center;justify-content:space-between;gap:10px}
+.transport-driver-list>.transport-list-heading h3{margin:0}
+.transport-driver-list>.transport-list-heading span{color:var(--muted,#667085);font-size:12px}
+.transport-driver-list .transport-student-row{justify-content:flex-start}
+@media(max-width:600px){.transport-scan-button{min-height:116px}.transport-camera-stage{aspect-ratio:3/4}.transport-driver-safety{font-size:12px}}
