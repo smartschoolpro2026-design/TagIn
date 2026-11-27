@@ -446,3 +446,15 @@
   .tagin-bulk-qr-image{width:150px!important;height:150px!important}
   @page{size:A4 portrait;margin:10mm}
 }
+
+
+/* Student register: keep class and teacher assignment inside the student form. */
+.student-form-grid .student-form-field-wide { grid-column: 1 / -1; }
+.student-inline-link { display: inline-flex; align-items: center; gap: 5px; margin-top: 8px; padding: 0; border: 0; background: transparent; color: var(--brand, #2457c5); font: inherit; font-size: .88rem; font-weight: 650; cursor: pointer; }
+.student-field-hint { margin: 7px 0 0; color: var(--muted, #667085); font-size: .82rem; line-height: 1.45; }
+.student-row-actions { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; }
+.student-row-actions .student-row-action { display: inline-flex; align-items: center; gap: 5px; }
+@media (max-width: 640px) {
+  .student-form-grid .student-form-field-wide { grid-column: auto; }
+  .student-row-actions { flex-direction: column; align-items: flex-start; }
+}
