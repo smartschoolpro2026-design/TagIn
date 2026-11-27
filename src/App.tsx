@@ -9,6 +9,7 @@ import { StudentDirectory } from './components/StudentDirectory';
 import { AttendanceWorkspace } from './components/AttendanceWorkspace';
 import { StaffWorkspace } from './components/StaffWorkspace';
 import { FamilyWorkspace } from './components/FamilyWorkspace';
+import { TransportWorkspace } from './components/TransportWorkspace';
 
 type Profile = {
   full_name: string;
@@ -41,7 +42,7 @@ export default function App() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [showSchoolManagement, setShowSchoolManagement] = useState(false);
-  const [activeWorkspace, setActiveWorkspace] = useState<'students' | 'attendance' | 'staff' | 'families' | 'family' | ''>('');
+  const [activeWorkspace, setActiveWorkspace] = useState<'students' | 'attendance' | 'staff' | 'families' | 'family' | 'transport-admin' | 'transport-driver' | ''>('');
   const [schools, setSchools] = useState<School[]>([]);
   const [schoolNameInput, setSchoolNameInput] = useState('');
   const [schoolSlugInput, setSchoolSlugInput] = useState('');
@@ -278,7 +279,11 @@ export default function App() {
   const schoolName = selectedMembership?.schools?.name ?? (isPlatformAdmin ? 'All schools' : 'No active school');
   return <main className="workspace-shell">
     <header className="workspace-topbar"><Brand /><div className="account-actions">{!isSchoolAdmin && <span className="user-chip">{profile.full_name}</span>}<button className="icon-button" onClick={signOut} disabled={busy} aria-label="Sign out"><LogOut size={18} /></button></div></header>
-    {activeWorkspace === 'families' && isSchoolAdmin && selectedMembership ? (
+    {activeWorkspace === 'transport-admin' && isSchoolAdmin && selectedMembership ? (
+      <TransportWorkspace client={client!} schoolId={selectedMembership.school_id} schoolName={schoolName} mode="admin" onBack={() => setActiveWorkspace('')} />
+    ) : activeWorkspace === 'transport-driver' && selectedMembership?.role === 'bus_staff' ? (
+      <TransportWorkspace client={client!} schoolId={selectedMembership.school_id} schoolName={schoolName} mode="driver" membershipId={selectedMembership.id} onBack={() => setActiveWorkspace('')} />
+    ) : activeWorkspace === 'families' && isSchoolAdmin && selectedMembership ? (
       <FamilyWorkspace client={client!} mode="admin" schoolId={selectedMembership.school_id} schoolName={schoolName} userId={session?.user.id ?? ''} onBack={() => setActiveWorkspace('')} />
     ) : activeWorkspace === 'family' && isParent && session ? (
       <FamilyWorkspace client={client!} mode="parent" userId={session.user.id} onBack={() => setActiveWorkspace('')} />
@@ -307,7 +312,8 @@ export default function App() {
           {isSchoolAdmin && <WorkspaceCard icon={<Users />} title="Staff management" description="Create teacher and gate staff accounts, manage access and review staff permissions." actionLabel="Manage staff" onAction={() => setActiveWorkspace('staff')} />}
           {isSchoolAdmin && <WorkspaceCard icon={<HeartHandshake />} title="Parents and guardians" description="Create parent logins and securely link each family to its student records." actionLabel="Manage families" onAction={() => setActiveWorkspace('families')} />}
           {(isSchoolAdmin || isUnifiedStaff && (hasStaffPermission('gate.scan') || hasStaffPermission('gate.check_in') || hasStaffPermission('gate.check_out')) || selectedMembership?.role === 'gate_staff') && <WorkspaceCard icon={<QrCode />} title="Gate check-in" description="Search students and record school arrival and departure with staff attribution." actionLabel="Open attendance" onAction={() => setActiveWorkspace('attendance')} />}
-          {(isPlatformAdmin || isSchoolAdmin || (isUnifiedStaff && (hasStaffPermission('transport.view_assigned') || hasStaffPermission('transport.board') || hasStaffPermission('transport.drop_off'))) || selectedMembership?.role === 'bus_staff') && <WorkspaceCard icon={<BusFront />} title="Transport" description="View assigned journeys and record student boarding and drop-off." />}
+          {isSchoolAdmin && <WorkspaceCard icon={<BusFront />} title="Transport management" description="Manage school vehicles, routes, stops, drivers and student allocations." actionLabel="Manage transport" onAction={() => setActiveWorkspace('transport-admin')} />}
+          {selectedMembership?.role === 'bus_staff' && <WorkspaceCard icon={<BusFront />} title="My transport journeys" description="View your assigned routes and record student pickup and drop-off." actionLabel="Open driver workspace" onAction={() => setActiveWorkspace('transport-driver')} />}
           {(isPlatformAdmin || isSchoolAdmin) && <WorkspaceCard icon={<ClipboardList />} title="Reports and overview" description="Review attendance, school activity, and operational reports." />}
           {isParent && <WorkspaceCard icon={<Bell />} title="Family updates" description="View your linked children's school arrival, departure, and attendance notifications." actionLabel="Open family portal" onAction={() => setActiveWorkspace('family')} />}
           {!isPlatformAdmin && !selectedMembership && !isParent && <WorkspaceCard icon={<ShieldCheck />} title="No school assigned" description="Your account is active, but no active school membership was found. Contact your administrator." />}
