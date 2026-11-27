@@ -1,2 +1,0 @@
-alter table public.profiles add column if not exists temporary_password_expires_at timestamptz;
-comment on column public.profiles.temporary_password_expires_at is 'Expiry time for one-time temporary credentials; null for regular accounts.';
