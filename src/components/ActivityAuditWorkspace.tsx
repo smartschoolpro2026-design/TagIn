@@ -120,6 +120,40 @@ export function ActivityAuditWorkspace({ client, session, schoolId, schoolName, 
     return !search.trim() || haystack.includes(search.trim().toLowerCase());
   }), [rows, selectedSchool, category, fromDate, toDate, search, actors, schools, platformAdmin, students, tagStudents]);
 
+  function openCsvReport() {
+    if (!pendingCsv) return;
+    const blob = new Blob([pendingCsv], { type: 'text/csv;charset=utf-8' });
+    const url = URL.createObjectURL(blob);
+    const opened = window.open(url, '_blank');
+    if (!opened) {
+      const anchor = document.createElement('a');
+      anchor.href = url;
+      anchor.download = downloadName;
+      anchor.target = '_self';
+      document.body.appendChild(anchor);
+      anchor.click();
+      anchor.remove();
+    }
+    window.setTimeout(() => URL.revokeObjectURL(url), 5 * 60 * 1000);
+    setNotice('The report has been opened as a file. If it does not download automatically, use your browser menu to download or share it.');
+  }
+
+  async function shareCsvReport() {
+    if (!pendingCsv) return;
+    const file = new File([pendingCsv], downloadName, { type: 'text/csv;charset=utf-8' });
+    if (navigator.share && (!navigator.canShare || navigator.canShare({ files: [file] }))) {
+      try {
+        await navigator.share({ files: [file], title: 'TagIn activity audit report' });
+        setNotice('The report was handed to your phone’s share menu. Choose where to save or send it.');
+      } catch (shareError) {
+        if (shareError instanceof Error && shareError.name === 'AbortError') return;
+        setError('Your phone could not share the file. Try Open / save report instead.');
+      }
+    } else {
+      setError('File sharing is not supported by this browser. Use Open / save report instead.');
+    }
+  }
+
   async function exportCsv() {
     if (!session.user.email) { setError('This account has no email sign-in identity available for password verification. Export is blocked for security.'); return; }
     if (!password) { setError('Enter your current login password to export this report.'); return; }
@@ -174,7 +208,7 @@ export function ActivityAuditWorkspace({ client, session, schoolId, schoolName, 
     </div>
     <div className="audit-summary"><span><strong>{filtered.length.toLocaleString()}</strong> matching activities</span><span>{rows.length.toLocaleString()} records loaded · Latest 2,000</span></div>
     {showVerify && <form className="audit-verify" onSubmit={e=>{e.preventDefault();void exportCsv();}}><div><ShieldCheck size={22}/><div><strong>Confirm your identity</strong><p>Enter your current TagIn login password to export this activity report.</p></div></div><input type="password" autoComplete="current-password" value={password} onChange={e=>setPassword(e.target.value)} placeholder="Current login password" required/><button className="primary-button" type="submit" disabled={exporting}>{exporting?'Verifying…':'Verify and download'}</button><button className="secondary-button" type="button" onClick={()=>{setShowVerify(false);setPassword('');}}>Cancel</button></form>}
-    {error && <p className="form-error" role="alert">{error}</p>}{notice && <p className="student-notice" role="status">{notice}</p>}{pendingCsv && <div className="audit-download-ready"><Download size={18}/><div><strong>Your report is ready</strong><p>Save the CSV file to your phone. You can open it with Excel or Google Sheets.</p><button className="primary-button" type="button" onClick={()=>{const blob=new Blob([pendingCsv],{type:'text/csv;charset=utf-8'});const url=URL.createObjectURL(blob);const anchor=document.createElement('a');anchor.href=url;anchor.download=downloadName;anchor.rel='noopener';document.body.appendChild(anchor);anchor.click();anchor.remove();window.setTimeout(()=>URL.revokeObjectURL(url),60000);}}>Save report</button></div></div>}
+    {error && <p className="form-error" role="alert">{error}</p>}{notice && <p className="student-notice" role="status">{notice}</p>}{pendingCsv && <div className="audit-download-ready"><Download size={18}/><div><strong>Your report is ready</strong><p>Choose how to save the CSV file on your phone. It can be opened with Excel or Google Sheets.</p><div className="audit-download-actions"><button className="primary-button" type="button" onClick={openCsvReport}>Open / save report</button><button className="secondary-button" type="button" onClick={()=>void shareCsvReport()}>Share / save file</button></div></div></div>}
     <div className="audit-list">
       {loading ? <p className="audit-empty">Loading activity records…</p> : filtered.length === 0 ? <p className="audit-empty">No activity matches these filters.</p> : filtered.map(row=><article className="audit-row" key={row.id}>
         <div className="audit-row-main"><span className="audit-action-icon"><Filter size={16}/></span><div className="audit-row-copy"><strong>{describe(row, students, tagStudents)}</strong><span>{row.actor_user_id ? actors[row.actor_user_id] ?? 'Account name unavailable' : (typeof row.metadata?.attempted_name === 'string' ? 'Failed sign-in attempt · ' + row.metadata.attempted_name : 'System / automated action')} · {row.school_id ? schools[row.school_id] ?? 'School' : 'Platform'}</span><small>{studentFor(row, students, tagStudents) ? studentFor(row, students, tagStudents)!.name + (studentFor(row, students, tagStudents)!.className ? ' · ' + studentFor(row, students, tagStudents)!.className : '') : friendlyEntity(row.entity_type)}</small></div></div>
