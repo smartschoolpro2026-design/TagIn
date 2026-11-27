@@ -48,6 +48,19 @@ export function AttendanceWorkspace({client,schoolId,schoolName,actorName,canChe
  async function resolveScannedCode(rawValue:string){
   setCameraError('');setError('');setNotice('');
   let token=rawValue.trim();
+  if(token.toUpperCase().startsWith('TAGIN-PICKUP:')){
+   const pickupToken=token.slice('TAGIN-PICKUP:'.length).trim();
+   if(!pickupToken){setCameraError('This pickup QR is empty.');return;}
+   try{
+    const digest=await crypto.subtle.digest('SHA-256',new TextEncoder().encode(pickupToken));
+    const tokenHash=Array.from(new Uint8Array(digest)).map(b=>b.toString(16).padStart(2,'0')).join('');
+    const {data,error:previewError}=await client.rpc('preview_parent_pickup',{p_school_id:schoolId,p_token_hash:tokenHash});
+    if(previewError||!data){setCameraError(previewError?.message||'This pickup pass could not be verified.');return;}
+    const {data:signed}=await client.storage.from('tagin-pickup-photos').createSignedUrl(data.photo_path,300);
+    setPendingPickup({...data,tokenHash,photoUrl:signed?.signedUrl??''});
+   }catch{setCameraError('The pickup pass could not be verified. Please try again.');}
+   return;
+  }
   if(token.toUpperCase().startsWith('TAGIN:'))token=token.slice(6).trim();
   if(!token){setCameraError('This QR code is empty.');return;}
   try{
