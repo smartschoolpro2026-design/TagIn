@@ -165,9 +165,18 @@ export default function App() {
         15000,
         'The login service is taking too long to respond. Please check your connection and try again.',
       );
-      const loginData = await loginResponse.json().catch(() => null) as { session?: Session } | null;
-      if (!loginResponse.ok || !loginData?.session?.access_token || !loginData?.session?.refresh_token) {
-        setError('Phone number or password is incorrect. Check your details or contact your school administrator.');
+      const loginData = await loginResponse.json().catch(() => null) as { session?: Session; error?: string } | null;
+      if (!loginResponse.ok) {
+        const serverMessage = typeof loginData?.error === 'string' ? loginData.error : '';
+        setError(serverMessage || (loginResponse.status === 401
+          ? 'The phone number or password was not accepted. Please check the number format and password.'
+          : loginResponse.status === 403
+            ? 'This account cannot sign in right now. Contact your school administrator.'
+            : 'TagIn could not reach the authentication service. Please try again shortly.'));
+        return;
+      }
+      if (!loginData?.session?.access_token || !loginData?.session?.refresh_token) {
+        setError('The authentication service responded, but did not return a complete secure session. This is a TagIn service issue, not a password error.');
         return;
       }
       const { error: sessionError } = await timeout(
