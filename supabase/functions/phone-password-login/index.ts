@@ -5,7 +5,7 @@ function jsonResponse(status: number, body: Record<string, unknown>) { return ne
 function normalizePhone(value: unknown): string | null { if (typeof value !== "string" || value.length > 40) return null; let p = value.trim().replace(/[ ().-]/g, ""); if (p.startsWith("00")) p = "+" + p.slice(2); if (p.length === 11 && p[0] === "0") p = "+234" + p.slice(1); if (!p.startsWith("+") || p.length < 9 || p.length > 16 || !Array.from(p.slice(1)).every(c => c >= "0" && c <= "9")) return null; return p; }
 async function authAlias(phone: string) { const digest = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(phone)); const hex = Array.from(new Uint8Array(digest), b => b.toString(16).padStart(2, "0")).join(""); return "u-" + hex + "@login.tagin.invalid"; }
 async function recordLoginAttempt(admin: ReturnType<typeof createClient>, phone: string, action: string) {
- const { data: target } = await admin.from("profiles").select("id").eq("phone", phone).maybeSingle();
+ const { data: target } = await admin.from("profiles").select("id,full_name").eq("phone", phone).maybeSingle();
  if (!target) {
   await admin.from("audit_logs").insert({ actor_user_id: null, action, entity_type: "auth_attempt", metadata: { reason: action === "auth.login_failed" ? "invalid_credentials" : "account_blocked", attempted_account_exists: false } });
   return;
@@ -14,7 +14,7 @@ async function recordLoginAttempt(admin: ReturnType<typeof createClient>, phone:
  const schoolIds = [...new Set((memberships ?? []).map(item => item.school_id))];
  const records = (schoolIds.length ? schoolIds : [null]).map(school_id => ({
   school_id, actor_user_id: null, action, entity_type: "auth_attempt", entity_id: target.id,
-  metadata: { reason: action === "auth.login_failed" ? "invalid_credentials" : "account_blocked", attempted_account_exists: true }
+  metadata: { reason: action === "auth.login_failed" ? "invalid_credentials" : "account_blocked", attempted_account_exists: true, attempted_name: target.full_name }
  }));
  await admin.from("audit_logs").insert(records);
 }
