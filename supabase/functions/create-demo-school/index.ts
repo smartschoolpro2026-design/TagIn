@@ -108,9 +108,33 @@ Deno.serve(async (req: Request) => {
     const people: Record<string, any> = {};
     for (const spec of specs) people[spec.key] = await account(admin, schoolId, auth.user.id, spec);
 
+    // Reuse the two original demo class records rather than leaving obsolete empty classes behind.
+    for (const legacy of [
+      { from: "Nursery 2", to: "Prep One", level: "Early Years" },
+      { from: "Primary 2", to: "Prep Two", level: "Early Years" },
+    ]) {
+      const { data: legacyClass } = await admin.from("school_classes").select("id").eq("school_id", schoolId).eq("class_name", legacy.from).maybeSingle();
+      if (legacyClass) {
+        const { error } = await admin.from("school_classes").update({ class_name: legacy.to, level: legacy.level }).eq("id", legacyClass.id);
+        if (error) throw new Error("Could not update the existing demo class " + legacy.from + ".");
+      }
+    }
     const classSpecs = [
-      { class_name: "Nursery 2", level: "Early Years" },
-      { class_name: "Primary 2", level: "Primary" },
+      { class_name: "Prep One", level: "Early Years" },
+      { class_name: "Prep Two", level: "Early Years" },
+      { class_name: "Nursery", level: "Early Years" },
+      { class_name: "Kindergarten", level: "Early Years" },
+      { class_name: "Grade One", level: "Primary" },
+      { class_name: "Grade Two", level: "Primary" },
+      { class_name: "Grade Three", level: "Primary" },
+      { class_name: "Grade Four", level: "Primary" },
+      { class_name: "Grade Five", level: "Primary" },
+      { class_name: "GSS One", level: "Junior Secondary" },
+      { class_name: "GSS Two", level: "Junior Secondary" },
+      { class_name: "GSS Three", level: "Junior Secondary" },
+      { class_name: "SS One", level: "Senior Secondary" },
+      { class_name: "SS Two", level: "Senior Secondary" },
+      { class_name: "SS Three", level: "Senior Secondary" },
     ];
     const classes: Record<string, any> = {};
     for (const spec of classSpecs) {
@@ -123,28 +147,35 @@ Deno.serve(async (req: Request) => {
       classes[spec.class_name] = data;
     }
 
-    const studentSpecs = [
-      { name: "Ava Carter", admission: "TDA-001", className: "Primary 2", parent: "parentA", usesBus: true },
-      { name: "Noah Carter", admission: "TDA-002", className: "Nursery 2", parent: "parentA", usesBus: true },
-      { name: "Ethan James", admission: "TDA-003", className: "Primary 2", parent: "parentB", usesBus: false },
-      { name: "Mia Carter", admission: "TDA-004", className: "Nursery 2", parent: "parentA", usesBus: true },
-      { name: "Liam Carter", admission: "TDA-005", className: "Nursery 2", parent: "parentA", usesBus: true },
-      { name: "Zoe Carter", admission: "TDA-006", className: "Nursery 2", parent: "parentA", usesBus: false },
-      { name: "Daniel James", admission: "TDA-007", className: "Nursery 2", parent: "parentB", usesBus: true },
-      { name: "Chloe James", admission: "TDA-008", className: "Nursery 2", parent: "parentB", usesBus: true },
-      { name: "Isaac James", admission: "TDA-009", className: "Nursery 2", parent: "parentB", usesBus: false },
-      { name: "Amara Okafor", admission: "TDA-010", className: "Nursery 2", parent: "parentA", usesBus: true },
-      { name: "David Okafor", admission: "TDA-011", className: "Nursery 2", parent: "parentB", usesBus: true },
-      { name: "Grace Williams", admission: "TDA-012", className: "Primary 2", parent: "parentA", usesBus: true },
-      { name: "Oliver Williams", admission: "TDA-013", className: "Primary 2", parent: "parentA", usesBus: true },
-      { name: "Sophia Williams", admission: "TDA-014", className: "Primary 2", parent: "parentB", usesBus: false },
-      { name: "Benjamin Adeyemi", admission: "TDA-015", className: "Primary 2", parent: "parentB", usesBus: true },
-      { name: "Isabella Bello", admission: "TDA-016", className: "Primary 2", parent: "parentA", usesBus: true },
-      { name: "Samuel Bello", admission: "TDA-017", className: "Primary 2", parent: "parentB", usesBus: true },
-      { name: "Ella Johnson", admission: "TDA-018", className: "Primary 2", parent: "parentA", usesBus: false },
-      { name: "James Johnson", admission: "TDA-019", className: "Primary 2", parent: "parentB", usesBus: true },
-      { name: "Mason Okafor", admission: "TDA-020", className: "Nursery 2", parent: "parentA", usesBus: true },
+    const originalNames = [
+      "Ava Carter", "Noah Carter", "Ethan James", "Mia Carter", "Liam Carter",
+      "Zoe Carter", "Daniel James", "Chloe James", "Isaac James", "Amara Okafor",
+      "David Okafor", "Grace Williams", "Oliver Williams", "Sophia Williams",
+      "Benjamin Adeyemi", "Isabella Bello", "Samuel Bello", "Ella Johnson",
+      "James Johnson", "Mason Okafor",
     ];
+    const givenNames = [
+      "Aria", "Caleb", "Layla", "Nathan", "Ruby", "Jayden", "Naomi", "Felix",
+      "Hannah", "Dylan", "Ivy", "Aaron", "Leah", "Elijah", "Maya", "Jordan",
+      "Faith", "Adrian", "Stella", "Gabriel", "Nora", "Emmanuel", "Talia",
+      "Peter", "Amelia", "Victor",
+    ];
+    const familyNames = ["Anderson", "Bennett", "Campbell", "Dawson", "Edwards"];
+    const generatedNames = familyNames.flatMap(family => givenNames.map(given => given + " " + family));
+    const rosterNames = [...originalNames, ...generatedNames];
+    if (rosterNames.length !== 150) throw new Error("The demo roster must contain exactly 150 students.");
+    const studentSpecs = classSpecs.flatMap((classSpec, classIndex) =>
+      Array.from({ length: 10 }, (_, studentIndex) => {
+        const index = classIndex * 10 + studentIndex;
+        return {
+          name: rosterNames[index],
+          admission: "TDA-" + String(index + 1).padStart(3, "0"),
+          className: classSpec.class_name,
+          parent: index % 2 === 0 ? "parentA" : "parentB",
+          usesBus: index % 2 === 0,
+        };
+      }),
+    );
     const students: any[] = [];
     for (const spec of studentSpecs) {
       const cls = classes[spec.className];
@@ -214,17 +245,17 @@ Deno.serve(async (req: Request) => {
     }
 
     const assessmentName = "Mathematics Mid-Term Test";
-    let { data: assessment } = await admin.from("assessments").select("id").eq("school_id", schoolId).eq("assessment_name", assessmentName).eq("class_name", "Primary 2").maybeSingle();
+    let { data: assessment } = await admin.from("assessments").select("id").eq("school_id", schoolId).eq("assessment_name", assessmentName).eq("class_name", "Grade Two").maybeSingle();
     if (!assessment) {
       const created = await admin.from("assessments").insert({
-        school_id: schoolId, class_name: "Primary 2", subject_name: "Mathematics", assessment_name: assessmentName,
+        school_id: schoolId, class_name: "Grade Two", subject_name: "Mathematics", assessment_name: assessmentName,
         assessment_type: "test", academic_year: "2026/2027", term: "First Term", max_score: 100,
         teacher_membership_id: people.teacher.membershipId, status: "published", assessment_date: "2026-11-20", created_by: people.teacher.userId,
       }).select("id").single();
       if (created.error || !created.data) throw new Error("Could not create the demo assessment.");
       assessment = created.data;
     }
-    for (const [i, student] of students.filter(s => s.className === "Primary 2").entries()) {
+    for (const [i, student] of students.filter(s => s.className === "Grade Two").entries()) {
       const { data: score } = await admin.from("assessment_scores").select("id").eq("assessment_id", assessment.id).eq("student_id", student.id).maybeSingle();
       if (!score) {
         const { error } = await admin.from("assessment_scores").insert({
@@ -237,9 +268,9 @@ Deno.serve(async (req: Request) => {
     }
 
     const timetableRows = [
-      { class_name: "Primary 2", subject_name: "Mathematics", weekday: 1, start_time: "08:00", end_time: "08:45" },
+      { class_name: "Grade Two", subject_name: "Mathematics", weekday: 1, start_time: "08:00", end_time: "08:45" },
       { class_name: "Primary 2", subject_name: "English Language", weekday: 1, start_time: "09:00", end_time: "09:45" },
-      { class_name: "Nursery 2", subject_name: "Numeracy", weekday: 2, start_time: "10:00", end_time: "10:30" },
+      { class_name: "Nursery", subject_name: "Numeracy", weekday: 2, start_time: "10:00", end_time: "10:30" },
     ];
     for (const row of timetableRows) {
       const { data: exists } = await admin.from("timetable_entries").select("id").eq("school_id", schoolId).eq("teacher_membership_id", people.teacher.membershipId).eq("class_name", row.class_name).eq("subject_name", row.subject_name).eq("weekday", row.weekday).maybeSingle();
@@ -293,7 +324,7 @@ Deno.serve(async (req: Request) => {
     }));
     return reply(200, {
       success: true, school: { id: schoolId, name: DEMO_SCHOOL, slug: DEMO_SLUG },
-      summary: { classes: 2, students: students.length, studentsPerClass: 10, parents: 2, staffAccounts: 6, transportRoutes: 1, qrPasses: students.length, sampleAttendance: true, sampleResults: true, sampleTransport: true },
+      summary: { classes: classSpecs.length, students: students.length, studentsPerClass: 10, parents: 2, staffAccounts: 6, transportRoutes: 1, qrPasses: students.length, sampleAttendance: true, sampleResults: true, sampleTransport: true },
       credentials,
       note: "These are fictional demo identities. Phone numbers are login identifiers only and are not contactable phone numbers.",
     });
