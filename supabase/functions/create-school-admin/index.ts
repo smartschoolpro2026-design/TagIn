@@ -55,15 +55,28 @@ Deno.serve(async (request: Request) => {
     auth: { autoRefreshToken: false, persistSession: false },
   });
   const { data: authData, error: authError } = await publicClient.auth.getUser(accessToken);
-  if (authError || !authData.user) return jsonResponse(401, { error: "Your session is invalid. Sign in again." });
+  if (authError || !authData.user) {
+    console.error("create-school-admin authentication verification failed", authError?.message ?? "No authenticated user");
+    return jsonResponse(401, { error: "Your session could not be verified. Please sign out and sign in again." });
+  }
 
   const adminClient = createClient(supabaseUrl, serviceRoleKey, {
     auth: { autoRefreshToken: false, persistSession: false },
   });
   const { data: actor, error: actorError } = await adminClient
     .from("profiles").select("platform_role,is_active").eq("id", authData.user.id).maybeSingle();
-  if (actorError || actor?.platform_role !== "super_admin" || actor.is_active !== true) {
-    return jsonResponse(403, { error: "Only an active platform administrator can create school administrators." });
+
+  if (actorError) {
+    console.error("create-school-admin profile lookup failed", actorError.code, actorError.message);
+    return jsonResponse(500, { error: "TagIn could not verify your administrator profile. Please try again." });
+  }
+  if (!actor || actor.platform_role !== "super_admin" || actor.is_active !== true) {
+    console.error("create-school-admin permission check failed", {
+      hasProfile: Boolean(actor),
+      platformRole: actor?.platform_role ?? null,
+      isActive: actor?.is_active ?? null,
+    });
+    return jsonResponse(403, { error: "This account is not recognized as an active platform administrator. Please sign out and sign in again." });
   }
 
   let body: { schoolId?: unknown; fullName?: unknown; phone?: unknown };
