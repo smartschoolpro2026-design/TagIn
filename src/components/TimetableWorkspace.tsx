@@ -7,7 +7,6 @@ type Teacher={id:string;profiles:{full_name:string}|null};
 type Student={id:string;class_name:string|null};
 type Props={client:SupabaseClient;schoolId:string;schoolName:string;mode:'admin'|'teacher'|'parent';membershipId?:string;userId?:string;onBack:()=>void};
 const days=['Monday','Tuesday','Wednesday','Thursday','Friday','Saturday','Sunday'];
-const dayName=(n:number)=>days[n-1]??'';
 const timeLabel=(v:string)=>v.slice(0,5);
 export function TimetableWorkspace({client,schoolId,schoolName,mode,membershipId,userId,onBack}:Props){
  const [entries,setEntries]=useState<Entry[]>([]),[teachers,setTeachers]=useState<Teacher[]>([]),[classes,setClasses]=useState<string[]>([]);
