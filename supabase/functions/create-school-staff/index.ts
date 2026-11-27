@@ -38,7 +38,7 @@ Deno.serve(async(req:Request)=>{
   userId=existing.id;isExistingAccount=true;
  }else{
   const email=await authAlias(phone),newPassword=temporaryPassword(),{data:created,error:createError}=await admin.auth.admin.createUser({email,password:newPassword,email_confirm:true,user_metadata:{full_name:fullName,phone}});
-  if(createError||!created.user){console.error("staff auth creation failed",createError?.message);return response(400,{error:"Could not create this staff login. Check the phone number and try again."});}
+  if(createError||!created.user){console.error("staff auth creation failed",{code:createError?.code,status:createError?.status,message:createError?.message});const authMessage=(createError?.message??"").toLowerCase();const safeMessage=authMessage.includes("already")||authMessage.includes("registered")?"A login already exists for this phone number but TagIn could not match it to an active profile. Please contact support so we can safely reconnect it.":authMessage.includes("password")?"The secure login could not be created because the password was rejected. Please try again.":"Supabase could not create this login. Please try again; if it continues, share the detailed message shown here with support.";return response(400,{error:safeMessage,code:createError?.code??null});}
   userId=created.user.id;password=newPassword;
   const expiresAt=new Date(Date.now()+24*60*60*1000).toISOString();
   const {error:profileError}=await admin.from("profiles").insert({id:userId,full_name:fullName,phone,platform_role:"user",is_active:true,must_change_password:true,temporary_password_expires_at:expiresAt});
