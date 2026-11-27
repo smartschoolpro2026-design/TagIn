@@ -327,3 +327,10 @@
 .audit-verify .primary-button{height:42px;margin:0;padding:0 13px;font-size:12px}
 .audit-verify .secondary-button{height:42px}
 @media(max-width:700px){.audit-page{padding-top:25px}.audit-heading{align-items:flex-start}.audit-heading h1{font-size:28px}.audit-toolbar{align-items:stretch}.audit-search{flex-basis:100%}.audit-toolbar select{flex:1 1 44%;min-width:0}.audit-date{flex:1 1 42%;justify-content:space-between}.audit-date input{width:calc(100% - 38px);min-width:0}.audit-toolbar button{flex:1 1 42%}.audit-summary{font-size:10.5px}.audit-row{grid-template-columns:1fr}.audit-row time{padding-left:47px}.audit-details{margin-left:47px}.audit-verify{align-items:stretch}.audit-verify>div{flex-basis:100%}.audit-verify input,.audit-verify button{width:100%}}
+
+.audit-download-ready{display:flex;align-items:center;gap:9px;margin:12px 0;padding:13px 15px;border:1px solid #cfe2d2;border-radius:9px;background:#f0f7f0;color:#356b49;font-size:13px;font-weight:700}
+.audit-download-ready a{color:#27613e;text-decoration:underline}
+.audit-human-details{margin-top:9px;padding:13px 14px;border-radius:9px;background:#f5f8f4;color:#526b5b;font-size:12px;line-height:1.7}
+.audit-human-details strong{display:block;color:#355b43;font-size:12px}
+.audit-human-details p{margin:5px 0 0;overflow-wrap:anywhere}
+.audit-row-copy small{text-transform:capitalize}
