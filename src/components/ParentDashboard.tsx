@@ -3,7 +3,7 @@ import type { SupabaseClient } from '@supabase/supabase-js';
 import { Award,Bell,BookOpen,BusFront,CalendarDays,ChevronDown,GraduationCap,HeartHandshake,School,ShieldCheck } from 'lucide-react';
 
 type Child={id:string;full_name:string;class_name:string|null;level:string|null;school:string;schoolId:string};
-type Props={client:SupabaseClient;userId:string;parentName:string;onOpen:(view:'scores-parent'|'timetable-parent'|'family'|'transport-parent')=>void};
+type Props={client:SupabaseClient;userId:string;parentName:string;onOpen:(view:'scores-parent'|'timetable-parent'|'family')=>void};
 export function ParentDashboard({client,userId,parentName,onOpen}:Props){
  const [children,setChildren]=useState<Child[]>([]);
  const [selectedId,setSelectedId]=useState('');
@@ -27,7 +27,7 @@ export function ParentDashboard({client,userId,parentName,onOpen}:Props){
   {title:'Children’s results',description:'Published scores and teacher remarks',icon:<Award size={20}/>,action:()=>onOpen('scores-parent')},
   {title:'Children’s timetable',description:'Weekly class schedule',icon:<CalendarDays size={20}/>,action:()=>onOpen('timetable-parent')},
   {title:'Family updates',description:'Attendance, arrival and departure notices',icon:<Bell size={20}/>,action:()=>onOpen('family')},
-  {title:'School operations',description:'Transport and school information',icon:<BusFront size={20}/>,action:()=>onOpen('transport-parent')},
+  {title:'Transport updates',description:'School bus pickup and drop-off updates',icon:<BusFront size={20}/>,action:()=>onOpen('family')},
  ];
  return <main className="parent-dashboard">
   <section className="parent-welcome"><div><p className="eyebrow">YOUR FAMILY PORTAL</p><h1>Hello, {parentName.trim().split(/\\s+/)[0]||'there'}.</h1><p>Welcome back to TagIn.</p></div><div className="parent-welcome-mark"><GraduationCap size={30}/></div></section>
