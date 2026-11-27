@@ -50,6 +50,14 @@ export function AttendanceWorkspace({client,schoolId,schoolName,actorName,canChe
  async function resolveScannedCode(rawValue:string){
   setCameraError('');setError('');setNotice('');
   let token=rawValue.trim();
+  if(/^https?:\/\//i.test(token)){
+   try{
+    const scannedUrl=new URL(token);
+    if(scannedUrl.origin==='https://tagin.smartschoolpro2026.workers.dev'&&scannedUrl.pathname==='/scan'){
+     token=scannedUrl.searchParams.get('code')||'';
+    }
+   }catch{ /* Continue with the original scanned value. */ }
+  }
   if(token.toUpperCase().startsWith('TAGIN-PICKUP:')){
    const pickupToken=token.slice('TAGIN-PICKUP:'.length).trim();
    if(!pickupToken){setCameraError('This pickup QR is empty.');return;}
