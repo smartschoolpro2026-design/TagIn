@@ -21,21 +21,38 @@ Deno.serve(async(req:Request)=>{
  const {data:membership,error:membershipError}=await admin.from("school_memberships").select("id").eq("school_id",schoolId).eq("user_id",auth.user.id).eq("role","school_admin").eq("status","active").maybeSingle();
  if(membershipError||!membership)return response(403,{error:"You can only create staff accounts for a school you administer."});
  const {data:school,error:schoolError}=await admin.from("schools").select("id,status").eq("id",schoolId).maybeSingle();if(schoolError||!school||school.status!=="active")return response(400,{error:"This school is not active."});
- const {data:existing}=await admin.from("profiles").select("id").eq("phone",phone).maybeSingle();if(existing)return response(409,{error:"An account already uses this phone number. Ask the platform administrator for help instead."});
- const email=await authAlias(phone),password=temporaryPassword(),{data:created,error:createError}=await admin.auth.admin.createUser({email,password,email_confirm:true,user_metadata:{full_name:fullName,phone}});
- if(createError||!created.user){console.error("staff auth creation failed",createError?.message);return response(400,{error:"Could not create this staff login. Check the phone number and try again."});}
- const userId=created.user.id,expiresAt=new Date(Date.now()+24*60*60*1000).toISOString();
- const {error:profileError}=await admin.from("profiles").insert({id:userId,full_name:fullName,phone,platform_role:"user",is_active:true,must_change_password:true,temporary_password_expires_at:expiresAt});
- if(profileError){await admin.auth.admin.deleteUser(userId);console.error("staff profile insert failed",profileError.message);return response(500,{error:"The staff profile could not be saved. No account was retained."});}
+ const {data:existing,error:existingError}=await admin.from("profiles").select("id,full_name,is_active").eq("phone",phone).maybeSingle();
+ if(existingError)return response(500,{error:"Could not check whether this phone number already has a TagIn account."});
+ let userId:string,password:string|undefined,isExistingAccount=false;
+ if(existing){
+  if(existing.is_active!==true)return response(403,{error:"An inactive TagIn account uses this phone number. Contact platform support."});
+  const [{data:parentMembership,error:parentMembershipError},{data:guardian,error:guardianError}]=await Promise.all([
+   admin.from("school_memberships").select("id").eq("school_id",schoolId).eq("user_id",existing.id).eq("role","parent").eq("status","active").maybeSingle(),
+   admin.from("guardians").select("id").eq("school_id",schoolId).eq("user_id",existing.id).maybeSingle()
+  ]);
+  if(parentMembershipError||guardianError)return response(500,{error:"Could not verify the existing account's relationship with this school."});
+  if(!parentMembership&&!guardian)return response(409,{error:"This phone number already belongs to a different TagIn account. For security, it can only be reused when the account is already a parent or guardian at this school."});
+  const {data:priorRole,error:priorRoleError}=await admin.from("school_memberships").select("id").eq("school_id",schoolId).eq("user_id",existing.id).eq("role",role).maybeSingle();
+  if(priorRoleError)return response(500,{error:"Could not check the existing school staff assignment."});
+  if(priorRole)return response(409,{error:"This person already has this staff role at your school. You can manage their existing staff access instead."});
+  userId=existing.id;isExistingAccount=true;
+ }else{
+  const email=await authAlias(phone),newPassword=temporaryPassword(),{data:created,error:createError}=await admin.auth.admin.createUser({email,password:newPassword,email_confirm:true,user_metadata:{full_name:fullName,phone}});
+  if(createError||!created.user){console.error("staff auth creation failed",createError?.message);return response(400,{error:"Could not create this staff login. Check the phone number and try again."});}
+  userId=created.user.id;password=newPassword;
+  const expiresAt=new Date(Date.now()+24*60*60*1000).toISOString();
+  const {error:profileError}=await admin.from("profiles").insert({id:userId,full_name:fullName,phone,platform_role:"user",is_active:true,must_change_password:true,temporary_password_expires_at:expiresAt});
+  if(profileError){await admin.auth.admin.deleteUser(userId);console.error("staff profile insert failed",profileError.message);return response(500,{error:"The staff profile could not be saved. No account was retained."});}
+ }
  const {data:newMembership,error:newMembershipError}=await admin.from("school_memberships").insert({school_id:schoolId,user_id:userId,role,status:"active"}).select("id").single();
- if(newMembershipError||!newMembership){await admin.auth.admin.deleteUser(userId);console.error("staff membership insert failed",newMembershipError?.message);return response(500,{error:"The school staff assignment could not be saved. No account was retained."});}
+ if(newMembershipError||!newMembership){if(!isExistingAccount)await admin.auth.admin.deleteUser(userId);console.error("staff membership insert failed",newMembershipError?.message);return response(newMembershipError?.code==="23505"?409:500,{error:newMembershipError?.code==="23505"?"This staff role is already assigned to this account at your school.":"The school staff assignment could not be saved."});}
  if(role==="staff"){
   const {error:staffProfileError}=await admin.from("staff_profiles").insert({membership_id:newMembership.id,job_title:jobTitle,department:department||null});
-  if(staffProfileError){await admin.from("school_memberships").delete().eq("id",newMembership.id);await admin.auth.admin.deleteUser(userId);console.error("staff details insert failed",staffProfileError.message);return response(500,{error:"The staff details could not be saved. No account was retained."});}
+  if(staffProfileError){await admin.from("school_memberships").delete().eq("id",newMembership.id);if(!isExistingAccount)await admin.auth.admin.deleteUser(userId);console.error("staff details insert failed",staffProfileError.message);return response(500,{error:"The staff details could not be saved. No new account or assignment was retained."});}
   const {error:permissionError}=await admin.from("staff_permissions").insert([{membership_id:newMembership.id,permission_key:"students.read_basic",granted_by:auth.user.id},{membership_id:newMembership.id,permission_key:"gate.check_in",granted_by:auth.user.id},{membership_id:newMembership.id,permission_key:"gate.check_out",granted_by:auth.user.id}]);
-  if(permissionError){await admin.from("school_memberships").delete().eq("id",newMembership.id);await admin.auth.admin.deleteUser(userId);console.error("staff permissions insert failed",permissionError.message);return response(500,{error:"The staff permissions could not be saved. No account was retained."});}
+  if(permissionError){await admin.from("school_memberships").delete().eq("id",newMembership.id);if(!isExistingAccount)await admin.auth.admin.deleteUser(userId);console.error("staff permissions insert failed",permissionError.message);return response(500,{error:"The staff permissions could not be saved. No new account or assignment was retained."});}
  }
- const {error:auditError}=await admin.from("audit_logs").insert({school_id:schoolId,actor_user_id:auth.user.id,action:"staff.created",entity_type:"school_membership",entity_id:newMembership.id,metadata:{staff_name:fullName,staff_role:role==="staff"?"teacher":role==="bus_staff"?"bus_driver":"gate_staff",phone}});
+ const {error:auditError}=await admin.from("audit_logs").insert({school_id:schoolId,actor_user_id:auth.user.id,action:"staff.created",entity_type:"school_membership",entity_id:newMembership.id,metadata:{staff_name:isExistingAccount?existing!.full_name:fullName,existing_account_reused:isExistingAccount,staff_role:role==="staff"?"teacher":role==="bus_staff"?"bus_driver":"gate_staff",phone}});
  if(auditError)console.error("staff audit log insert failed",auditError.message);
- return response(200,{success:true,staff:{fullName,phone,role:role==="staff"?"teacher":role==="bus_staff"?"bus_staff":"gate_staff"},temporaryPassword:password});
+ return response(200,{success:true,existingAccount:isExistingAccount,staff:{fullName:isExistingAccount?existing!.full_name:fullName,phone,role:role==="staff"?"teacher":role==="bus_staff"?"bus_staff":"gate_staff"},...(password?{temporaryPassword:password}:{})});
 });
