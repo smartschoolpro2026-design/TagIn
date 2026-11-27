@@ -128,10 +128,19 @@ export default function App() {
     const handleBack = (event: PopStateEvent) => {
       const state = event.state as { taginNavigation?: boolean; view?: string; guard?: boolean } | null;
       if (!state?.taginNavigation || state.guard) {
-        // At TagIn's root screen: keep the user in the app rather than
-        // allowing Android Back to close the tab immediately.
-        const rootState = { taginNavigation: true, view: currentView, guard: true };
-        window.history.pushState(rootState, '', window.location.href);
+        // A root sentinel can also be the previous in-app screen. Restore it
+        // first; only re-arm it when already at that screen.
+        const rootView = state?.taginNavigation ? (state.view ?? 'home') : 'home';
+        if (rootView !== currentView) {
+          restoringNavigation.current = true;
+          setShowSchoolManagement(rootView === 'school-management');
+          setActiveWorkspace(rootView === 'dashboard' || rootView === 'home' || rootView === 'signin' || rootView === 'school-management' ? '' : rootView as typeof activeWorkspace);
+          if (rootView === 'signin') setShowSignIn(true);
+          else if (rootView === 'home') setShowSignIn(false);
+        } else {
+          const rootState = { taginNavigation: true, view: currentView, guard: true };
+          window.history.pushState(rootState, '', window.location.href);
+        }
         return;
       }
       restoringNavigation.current = true;
