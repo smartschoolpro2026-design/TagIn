@@ -4,11 +4,13 @@ import { ArrowLeft, BookOpen, Plus, Users, RefreshCw } from 'lucide-react';
 
 type SchoolClass = { id: string; class_name: string; level: string };
 type Student = { id: string; full_name: string; class_id: string; class_name: string | null; level: string | null; active: boolean; created_at: string };
+type AttendanceEvent = { id: string; student_id: string; event_type: 'check_in' | 'check_out'; created_at: string };
 type Props = { client: SupabaseClient; schoolId: string; schoolName: string; membershipId: string; onBack: () => void };
 
 export function TeacherWorkspace({ client, schoolId, schoolName, membershipId, onBack }: Props) {
   const [classes, setClasses] = useState<SchoolClass[]>([]);
   const [students, setStudents] = useState<Student[]>([]);
+  const [attendance, setAttendance] = useState<Record<string, AttendanceEvent>>({});
   const [selectedClassId, setSelectedClassId] = useState('');
   const [fullName, setFullName] = useState('');
   const [showForm, setShowForm] = useState(false);
@@ -62,6 +64,35 @@ export function TeacherWorkspace({ client, schoolId, schoolName, membershipId, o
 
   const selectedClass = classes.find(item => item.id === selectedClassId) ?? null;
   const visibleStudents = useMemo(() => students.filter(item => item.class_id === selectedClassId), [students, selectedClassId]);
+  const todayPresentCount = visibleStudents.filter(student => attendance[student.id]?.event_type === 'check_in').length;
+  async function loadAttendance() {
+    const studentIds = students.map(student => student.id);
+    if (!studentIds.length) { setAttendance({}); return; }
+    const dayStart = new Date(); dayStart.setHours(0, 0, 0, 0);
+    const { data, error: attendanceError } = await client.from('scan_events')
+      .select('id,student_id,event_type,created_at')
+      .eq('school_id', schoolId)
+      .in('student_id', studentIds)
+      .in('event_type', ['check_in', 'check_out'])
+      .gte('created_at', dayStart.toISOString())
+      .order('created_at', { ascending: false });
+    if (attendanceError) { setError('Today’s attendance could not be loaded. Ask the administrator to verify teacher attendance access.'); return; }
+    const latest: Record<string, AttendanceEvent> = {};
+    for (const event of (data ?? []) as AttendanceEvent[]) if (!latest[event.student_id]) latest[event.student_id] = event;
+    setAttendance(latest);
+  }
+
+  useEffect(() => {
+    if (!students.length) { setAttendance({}); return; }
+    void loadAttendance();
+  }, [client, schoolId, students]);
+
+  useEffect(() => {
+    const channel = client.channel('teacher-attendance-' + membershipId)
+      .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'scan_events', filter: 'school_id=eq.' + schoolId }, () => { void loadAttendance(); })
+      .subscribe();
+    return () => { void client.removeChannel(channel); };
+  }, [client, schoolId, membershipId, students]);
 
   async function addStudent(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -90,7 +121,7 @@ export function TeacherWorkspace({ client, schoolId, schoolName, membershipId, o
         <button className="back-link" type="button" onClick={onBack}><ArrowLeft size={16}/> Back to dashboard</button>
         <p className="eyebrow">TEACHING WORKSPACE · {schoolName}</p>
         <h1>My classes</h1>
-        <p className="muted">Your class registers are shared with the School Admin and update as students are added or assigned.</p>
+        <p className="muted">Your assigned class registers and today’s gate attendance update automatically as students arrive and leave.</p>
       </div>
       <button className="secondary-button" type="button" onClick={() => void load()} disabled={loading}><RefreshCw size={15}/> Refresh</button>
     </div>
@@ -102,9 +133,9 @@ export function TeacherWorkspace({ client, schoolId, schoolName, membershipId, o
       <div className="teacher-class-summary"><article><span>Assigned classes</span><strong>{classes.length}</strong></article><article><span>Students in your classes</span><strong>{students.filter(item => item.active).length}</strong></article></div>
       <div className="teacher-class-tabs">{classes.map(item => <button type="button" key={item.id} className={selectedClassId === item.id ? 'active' : ''} onClick={() => setSelectedClassId(item.id)}>{item.class_name}{item.level ? ' · ' + item.level : ''}<span>{students.filter(s => s.class_id === item.id).length}</span></button>)}</div>
       {selectedClass && <section className="teacher-register-panel">
-        <div className="teacher-register-heading"><div><p className="eyebrow">CLASS REGISTER</p><h2>{selectedClass.class_name}{selectedClass.level ? ' · ' + selectedClass.level : ''}</h2><p className="muted">{visibleStudents.length} students · Changes are shared with the School Admin</p></div><button className="primary-button" type="button" onClick={() => { setShowForm(v => !v); setError(''); setNotice(''); }}><Plus size={16}/>{showForm ? 'Close' : 'Add student'}</button></div>
+        <div className="teacher-register-heading"><div><p className="eyebrow">CLASS REGISTER</p><h2>{selectedClass.class_name}{selectedClass.level ? ' · ' + selectedClass.level : ''}</h2><p className="muted">{visibleStudents.length} students · {todayPresentCount} currently present today · Attendance syncs live from the gate</p></div><button className="primary-button" type="button" onClick={() => { setShowForm(v => !v); setError(''); setNotice(''); }}><Plus size={16}/>{showForm ? 'Close' : 'Add student'}</button></div>
         {showForm && <form className="teacher-add-student-form" onSubmit={addStudent}><label htmlFor="teacher-student-name">Student full name</label><input id="teacher-student-name" value={fullName} onChange={e => setFullName(e.target.value)} placeholder="Enter the new student's full name" required minLength={2} maxLength={160}/><p className="muted">Class: {selectedClass.class_name}{selectedClass.level ? ' · ' + selectedClass.level : ''}</p><button className="primary-button" type="submit" disabled={busy}>{busy ? 'Saving student…' : 'Save student to class'}</button></form>}
-        {visibleStudents.length ? <div className="teacher-student-list">{visibleStudents.map(student => <article key={student.id}><span className="teacher-student-avatar">{student.full_name.slice(0,1).toUpperCase()}</span><div><strong>{student.full_name}</strong><small>{student.class_name ?? selectedClass.class_name}{student.level ? ' · ' + student.level : ''}</small></div><span className={'student-status '+(student.active ? 'active' : 'inactive')}>{student.active ? 'Active' : 'Inactive'}</span></article>)}</div> : <div className="teacher-empty"><Users size={25}/><p>No students have been added to this class yet.</p></div>}
+        {visibleStudents.length ? <div className="teacher-student-list">{visibleStudents.map(student => <article key={student.id}><span className="teacher-student-avatar">{student.full_name.slice(0,1).toUpperCase()}</span><div><strong>{student.full_name}</strong><small>{student.class_name ?? selectedClass.class_name}{student.level ? ' · ' + student.level : ''}</small><small className="teacher-attendance-time">{attendance[student.id] ? (attendance[student.id].event_type === 'check_in' ? 'Arrival: ' : 'Departure: ') + new Date(attendance[student.id].created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : 'No check-in recorded today'}</small></div><span className={'student-status '+(attendance[student.id]?.event_type === 'check_in' ? 'active' : attendance[student.id]?.event_type === 'check_out' ? 'inactive' : 'pending')}>{attendance[student.id]?.event_type === 'check_in' ? 'Present' : attendance[student.id]?.event_type === 'check_out' ? 'Checked out' : 'Not arrived'}</span></article>)}</div> : <div className="teacher-empty"><Users size={25}/><p>No students have been added to this class yet.</p></div>}
       </section>}
     </>}
   </section>;
