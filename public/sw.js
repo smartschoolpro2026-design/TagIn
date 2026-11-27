@@ -1,8 +1,19 @@
-const CACHE_NAME = 'tagin-app-shell-v1';
+const CACHE_NAME = 'tagin-app-shell-v2';
 const APP_SHELL = ['/','/index.html','/manifest.webmanifest','/tagin-logo.svg','/qrcode.js'];
 
 self.addEventListener('install', (event) => {
-  event.waitUntil(caches.open(CACHE_NAME).then((cache) => cache.addAll(APP_SHELL)).then(() => self.skipWaiting()));
+  event.waitUntil((async () => {
+    const cache = await caches.open(CACHE_NAME);
+    await cache.addAll(APP_SHELL);
+    const response = await fetch('/index.html');
+    if (response.ok) {
+      const html = await response.text();
+      const assets = [...html.matchAll(/(?:src|href)=["'](\/assets\/[^"']+)["']/g)].map((match) => match[1]);
+      await Promise.all(assets.map((asset) => cache.add(asset).catch(() => undefined)));
+      await cache.put('/index.html', new Response(html, {headers:{'Content-Type':'text/html; charset=utf-8'}}));
+    }
+    await self.skipWaiting();
+  })());
 });
 
 self.addEventListener('activate', (event) => {
