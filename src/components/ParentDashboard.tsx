@@ -38,7 +38,7 @@ export function ParentDashboard({client,userId,parentName,onOpen}:Props){
   {title:'Transport updates',description:'School bus pickup and drop-off updates',icon:<BusFront size={20}/>,action:()=>onOpen('family')},
  ];
  return <main className="parent-dashboard">
-  <section className="parent-welcome"><div><p className="eyebrow">YOUR FAMILY PORTAL</p><h1>Hello, {parentName.trim().split(/\s+/)[0]||'there'}.</h1><p>Welcome back to TagIn.</p></div><div className="parent-welcome-mark"><GraduationCap size={30}/></div></section>
+  <section className="parent-welcome"><div><h1>Hello, {parentName.trim().split(/\s+/)[0]||'there'}.</h1><p>{child?`Welcome back to ${child.full_name}’s workspace.`:'Welcome back to your child’s workspace.'}</p></div><div className="parent-welcome-mark"><GraduationCap size={30}/></div></section>
   {error&&<p className="form-error" role="alert">{error}</p>}
   {loading?<div className="parent-panel parent-loading">Loading your children…</div>:!child?<div className="parent-panel parent-empty"><HeartHandshake size={28}/><strong>No children linked yet</strong><p>Ask your child’s school to link your account to a student record.</p></div>:<>
    <section className="parent-school-strip"><span><School size={17}/></span><div><small>SCHOOL</small><strong>{child.school}</strong></div></section>
