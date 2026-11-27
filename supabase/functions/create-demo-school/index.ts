@@ -127,6 +127,23 @@ Deno.serve(async (req: Request) => {
       { name: "Ava Carter", admission: "TDA-001", className: "Primary 2", parent: "parentA", usesBus: true },
       { name: "Noah Carter", admission: "TDA-002", className: "Nursery 2", parent: "parentA", usesBus: true },
       { name: "Ethan James", admission: "TDA-003", className: "Primary 2", parent: "parentB", usesBus: false },
+      { name: "Mia Carter", admission: "TDA-004", className: "Nursery 2", parent: "parentA", usesBus: true },
+      { name: "Liam Carter", admission: "TDA-005", className: "Nursery 2", parent: "parentA", usesBus: true },
+      { name: "Zoe Carter", admission: "TDA-006", className: "Nursery 2", parent: "parentA", usesBus: false },
+      { name: "Daniel James", admission: "TDA-007", className: "Nursery 2", parent: "parentB", usesBus: true },
+      { name: "Chloe James", admission: "TDA-008", className: "Nursery 2", parent: "parentB", usesBus: true },
+      { name: "Isaac James", admission: "TDA-009", className: "Nursery 2", parent: "parentB", usesBus: false },
+      { name: "Amara Okafor", admission: "TDA-010", className: "Nursery 2", parent: "parentA", usesBus: true },
+      { name: "David Okafor", admission: "TDA-011", className: "Nursery 2", parent: "parentB", usesBus: true },
+      { name: "Grace Williams", admission: "TDA-012", className: "Primary 2", parent: "parentA", usesBus: true },
+      { name: "Oliver Williams", admission: "TDA-013", className: "Primary 2", parent: "parentA", usesBus: true },
+      { name: "Sophia Williams", admission: "TDA-014", className: "Primary 2", parent: "parentB", usesBus: false },
+      { name: "Benjamin Adeyemi", admission: "TDA-015", className: "Primary 2", parent: "parentB", usesBus: true },
+      { name: "Isabella Bello", admission: "TDA-016", className: "Primary 2", parent: "parentA", usesBus: true },
+      { name: "Samuel Bello", admission: "TDA-017", className: "Primary 2", parent: "parentB", usesBus: true },
+      { name: "Ella Johnson", admission: "TDA-018", className: "Primary 2", parent: "parentA", usesBus: false },
+      { name: "James Johnson", admission: "TDA-019", className: "Primary 2", parent: "parentB", usesBus: true },
+      { name: "Mason Okafor", admission: "TDA-020", className: "Primary 2", parent: "parentA", usesBus: true },
     ];
     const students: any[] = [];
     for (const spec of studentSpecs) {
@@ -212,7 +229,7 @@ Deno.serve(async (req: Request) => {
       if (!score) {
         const { error } = await admin.from("assessment_scores").insert({
           school_id: schoolId, assessment_id: assessment.id, student_id: student.id,
-          score: i === 0 ? 86 : 92, remarks: i === 0 ? "Good understanding; keep practising." : "Excellent work and careful reasoning.",
+          score: [86, 92, 78, 88, 74, 95, 81, 90, 84, 76][i], remarks: i === 0 ? "Good understanding; keep practising." : "Good effort and continued progress.",
           entered_by: people.teacher.userId,
         });
         if (error) throw new Error("Could not add demo assessment scores.");
@@ -276,7 +293,7 @@ Deno.serve(async (req: Request) => {
     }));
     return reply(200, {
       success: true, school: { id: schoolId, name: DEMO_SCHOOL, slug: DEMO_SLUG },
-      summary: { classes: 2, students: students.length, parents: 2, staffAccounts: 6, transportRoutes: 1, qrPasses: students.length, sampleAttendance: true, sampleResults: true, sampleTransport: true },
+      summary: { classes: 2, students: students.length, studentsPerClass: 10, parents: 2, staffAccounts: 6, transportRoutes: 1, qrPasses: students.length, sampleAttendance: true, sampleResults: true, sampleTransport: true },
       credentials,
       note: "These are fictional demo identities. Phone numbers are login identifiers only and are not contactable phone numbers.",
     });
