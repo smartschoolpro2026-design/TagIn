@@ -458,3 +458,10 @@
   .student-form-grid .student-form-field-wide { grid-column: auto; }
   .student-row-actions { flex-direction: column; align-items: flex-start; }
 }
+
+
+/* Anonymous QR card reference label: no student identity is printed. */
+.tagin-bulk-reference-label{margin:0 0 3px;color:#65786e;font-size:9px;font-weight:800;letter-spacing:.12em}
+.tagin-bulk-reference{display:block;margin:0 0 8px;color:#153f32;font-size:18px;letter-spacing:.08em;font-variant-numeric:tabular-nums}
+.tagin-qr-card .tagin-qr-image{margin:18px auto 8px}
+.tagin-qr-card .tagin-bulk-reference{font-size:21px;margin-bottom:16px}
