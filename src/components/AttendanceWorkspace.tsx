@@ -79,6 +79,21 @@ export function AttendanceWorkspace({client,schoolId,schoolName,actorName,canChe
   }
  }
 
+ async function confirmPickupRelease(){
+  if(!pendingPickup||pickupBusy)return;
+  setPickupBusy(true);setError('');setNotice('');
+  const {data,error:e}=await client.rpc('complete_parent_pickup',{p_school_id:schoolId,p_token_hash:pendingPickup.tokenHash});
+  if(e){setError(e.message||'The pickup pass could not be completed.');}
+  else{
+   const releasedName=data?.student_name||pendingPickup.student_name;
+   const collectorName=data?.collector_name||pendingPickup.collector_name;
+   setPendingPickup(null);
+   await choose({id:pendingPickup.student_id,full_name:releasedName,class_name:pendingPickup.class_name??null,level:pendingPickup.level??null});
+   setNotice(releasedName+' has been released to '+collectorName+'. The one-time pickup pass is now used.');
+   await refreshRecent();
+  }
+  setPickupBusy(false);
+ }
  async function refreshRecent(){const {data}=await client.from('scan_events').select('id,student_id,event_type,created_at,collected_by_name,scanned_by').eq('school_id',schoolId).in('event_type',['check_in','check_out']).order('created_at',{ascending:false}).limit(12);setRecent((data??[]) as Event[]);}
  useEffect(()=>{let alive=true;async function load(){setLoading(true);const [s,e]=await Promise.all([client.from('students').select('id,full_name,class_name,level').eq('school_id',schoolId).eq('active',true).order('full_name'),client.from('scan_events').select('id,student_id,event_type,created_at,collected_by_name,scanned_by').eq('school_id',schoolId).in('event_type',['check_in','check_out']).order('created_at',{ascending:false}).limit(12)]);if(!alive)return;if(s.error)setError('Could not load this school’s student register.');else setStudents((s.data??[]) as Student[]);if(e.error)setError('Attendance history is not available to this account.');else setRecent((e.data??[]) as Event[]);setLoading(false);}void load();return()=>{alive=false;}},[client,schoolId]);
  const filtered=useMemo(()=>{const q=search.trim().toLowerCase();return students.filter(s=>!q||[s.full_name,s.class_name??'',s.level??''].some(v=>v.toLowerCase().includes(q))).slice(0,40)},[students,search]);
