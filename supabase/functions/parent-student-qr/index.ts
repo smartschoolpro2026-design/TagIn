@@ -43,13 +43,14 @@ Deno.serve(async (req: Request) => {
     if (!studentId) return json(400, { error: "Choose a linked child." });
 
     const bytes = crypto.getRandomValues(new Uint8Array(32));
-    const token = btoa(String.fromCharCode(...bytes))
+    const p_token = btoa(String.fromCharCode(...bytes))
       .replaceAll("+", "-").replaceAll("/", "_").replaceAll("=", "");
-    const digest = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(token));
+    const digest = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(p_token));
     const tokenHash = Array.from(new Uint8Array(digest), b => b.toString(16).padStart(2, "0")).join("");
 
-    const { data: student, error: issueError } = await client.rpc("issue_parent_student_qr", {
+    const { data: student, error: issueError } = await client.rpc("get_or_create_parent_student_qr", {
       p_student_id: studentId,
+      p_token,
       p_token_hash: tokenHash,
     });
 
@@ -64,7 +65,7 @@ Deno.serve(async (req: Request) => {
 
     return json(200, {
       success: true,
-      token,
+      token: student.token,
       student: {
         id: student.id,
         fullName: student.full_name,
