@@ -47,7 +47,7 @@ export default function App() {
   const [showSignIn, setShowSignIn] = useState(false);
   const [error, setError] = useState('');
   const [showSchoolManagement, setShowSchoolManagement] = useState(false);
-  const [activeWorkspace, setActiveWorkspace] = useState<'students' | 'attendance' | 'staff' | 'families' | 'family' | 'transport-admin' | 'transport-driver' | 'timetable-admin' | 'timetable-teacher' | 'timetable-parent' | 'scores-admin' | 'scores-teacher' | 'scores-parent' | 'students-advanced' | ''>('');
+  const [activeWorkspace, setActiveWorkspace] = useState<'students' | 'attendance' | 'staff' | 'families' | 'family' | 'transport-admin' | 'transport-driver' | 'timetable-admin' | 'timetable-teacher' | 'timetable-parent' | 'scores-admin' | 'scores-teacher' | 'scores-parent' | 'students-advanced' | 'attendance-scan' | ''>('');
   const [schools, setSchools] = useState<School[]>([]);
   const [schoolNameInput, setSchoolNameInput] = useState('');
   const [schoolSlugInput, setSchoolSlugInput] = useState('');
