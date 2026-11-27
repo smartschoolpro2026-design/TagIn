@@ -1,4 +1,4 @@
-import {ArrowRight,Award,Bell,BusFront,CalendarDays,CheckCircle2,GraduationCap,HeartHandshake,LockKeyhole,Users} from 'lucide-react';
+import {ArrowRight,Award,Bell,BusFront,CalendarDays,CheckCircle2,HeartHandshake,LockKeyhole,Users} from 'lucide-react';
 type Props={onSignIn:()=>void};
 export function PublicLandingPage({onSignIn}:Props){
  return <main className="public-site" id="top">
