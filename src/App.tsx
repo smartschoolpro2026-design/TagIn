@@ -156,14 +156,17 @@ export default function App() {
         new Promise<never>((_, reject) => window.setTimeout(() => reject(new Error(message)), ms)),
       ]);
     try {
-      const { data: loginData, error: authError } = await timeout(
-        client.functions.invoke('phone-password-login', {
-          body: { phone: phone.trim(), password },
+      const loginResponse = await timeout(
+        fetch('/api/auth/phone-password-login', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ phone: phone.trim(), password }),
         }),
         15000,
         'The login service is taking too long to respond. Please check your connection and try again.',
       );
-      if (authError || !loginData?.session?.access_token || !loginData?.session?.refresh_token) {
+      const loginData = await loginResponse.json().catch(() => null) as { session?: Session } | null;
+      if (!loginResponse.ok || !loginData?.session?.access_token || !loginData?.session?.refresh_token) {
         setError('Phone number or password is incorrect. Check your details or contact your school administrator.');
         return;
       }
