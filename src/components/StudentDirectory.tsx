@@ -131,7 +131,7 @@ export function StudentDirectory({ client, schoolId, schoolName, onBack }: Props
         return { student, token, tokenHash };
       }));
       const studentIds = issued.map(item => item.student.id);
-      const { data: previousTags, error: previousError } = await client.from('tags').select('id,student_id').eq('school_id', schoolId).in('student_id', studentIds).eq('status', 'active');
+      const { data: previousTags, error: previousError } = await client.from('tags').select('id,student_id').eq('school_id', schoolId).in('student_id', studentIds).eq('tag_type', 'bag').eq('status', 'active');
       if (previousError) throw new Error('Existing student QR passes could not be checked. No codes were changed.');
       const { data: newTags, error: insertError } = await client.from('tags')
         .insert(issued.map(item => ({ school_id: schoolId, student_id: item.student.id, token_hash: item.tokenHash, tag_type: 'bag', status: 'active' })))
