@@ -167,10 +167,12 @@ export default function App() {
     return () => window.removeEventListener('popstate', handleBack);
   }, [currentView]);
 
-  const selectedMembership = useMemo(
-    () => memberships.find((membership) => membership.school_id === schoolId) ?? memberships[0],
-    [memberships, schoolId],
-  );
+  const selectedMembership = useMemo(() => {
+    const inSchool=memberships.filter((membership)=>membership.school_id===schoolId);
+    if(roleMode==='staff') return inSchool.find((membership)=>['staff','gate_staff','bus_staff'].includes(membership.role)) ?? memberships.find((membership)=>['staff','gate_staff','bus_staff'].includes(membership.role)) ?? inSchool[0] ?? memberships[0];
+    if(roleMode==='parent') return inSchool.find((membership)=>membership.role==='parent') ?? memberships.find((membership)=>membership.role==='parent') ?? inSchool[0] ?? memberships[0];
+    return inSchool[0] ?? memberships[0];
+  },[memberships,schoolId,roleMode]);
 
   useEffect(() => {
     if (!client || profile?.platform_role !== 'super_admin' || !showSchoolManagement) return;
