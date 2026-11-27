@@ -85,7 +85,20 @@ export function ActivityAuditWorkspace({ client, session, schoolId, schoolName, 
     setExporting(true); setError(''); setNotice('');
     const { error: verifyError } = await client.auth.signInWithPassword({ email: session.user.email, password });
     if (verifyError) {
+      await client.rpc('record_audit_export_attempt', { p_school_id: platformAdmin ? (selectedSchool || null) : (schoolId ?? null), p_format: 'csv', p_record_count: filtered.length, p_filters: { category, from: fromDate || null, to: toDate || null }, p_success: false });
       setError('Password verification failed. No report was downloaded.');
+      setExporting(false);
+      return;
+    }
+    const { error: auditError } = await client.rpc('record_audit_export_attempt', {
+      p_school_id: platformAdmin ? (selectedSchool || null) : (schoolId ?? null),
+      p_format: 'csv',
+      p_record_count: filtered.length,
+      p_filters: { category, from: fromDate || null, to: toDate || null },
+      p_success: true,
+    });
+    if (auditError) {
+      setError('The export could not be recorded in the audit trail, so the report was not downloaded.');
       setExporting(false);
       return;
     }
