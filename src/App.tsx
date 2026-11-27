@@ -1,10 +1,19 @@
 import { useEffect, useMemo, useState, type FormEvent, type ReactNode } from 'react';
 import {
-  ArrowRight, Bell, BusFront, CheckCircle2, ClipboardList, GraduationCap,
-  Eye, EyeOff, LogOut, QrCode, ShieldCheck, Users,
+  ArrowRight, Award, Bell, BusFront, CalendarDays, CheckCircle2, ClipboardList, GraduationCap, HeartHandshake, ShieldCheck,
+  Eye, EyeOff, LogOut, QrCode, Users,
 } from 'lucide-react';
 import type { Session } from '@supabase/supabase-js';
 import { isSupabaseConfigured, supabase } from './lib/supabase';
+import { StudentDirectory } from './components/StudentDirectory';
+import { AdvancedStudentWorkspace } from './components/AdvancedStudentWorkspace';
+import { AttendanceWorkspace } from './components/AttendanceWorkspace';
+import { StaffWorkspace } from './components/StaffWorkspace';
+import { FamilyWorkspace } from './components/FamilyWorkspace';
+import { TransportWorkspace } from './components/TransportWorkspace';
+import { TimetableWorkspace } from './components/TimetableWorkspace';
+import { ScoresWorkspace } from './components/ScoresWorkspace';
+import { PublicLandingPage } from './components/PublicLandingPage';
 
 type Profile = {
   full_name: string;
@@ -25,6 +34,7 @@ export default function App() {
   const [session, setSession] = useState<Session | null>(null);
   const [profile, setProfile] = useState<Profile | null>(null);
   const [memberships, setMemberships] = useState<Membership[]>([]);
+  const [guardianSchoolIds, setGuardianSchoolIds] = useState<string[]>([]);
   const [staffJobTitle, setStaffJobTitle] = useState('Staff member');
   const [staffPermissions, setStaffPermissions] = useState<string[]>([]);
   const [schoolId, setSchoolId] = useState('');
@@ -34,8 +44,10 @@ export default function App() {
   const [newPassword, setNewPassword] = useState('');
   const [busy, setBusy] = useState(false);
   const [loading, setLoading] = useState(true);
+  const [showSignIn, setShowSignIn] = useState(false);
   const [error, setError] = useState('');
   const [showSchoolManagement, setShowSchoolManagement] = useState(false);
+  const [activeWorkspace, setActiveWorkspace] = useState<'students' | 'attendance' | 'staff' | 'families' | 'family' | 'transport-admin' | 'transport-driver' | 'timetable-admin' | 'timetable-teacher' | 'timetable-parent' | 'scores-admin' | 'scores-teacher' | 'scores-parent' | 'students-advanced' | ''>('');
   const [schools, setSchools] = useState<School[]>([]);
   const [schoolNameInput, setSchoolNameInput] = useState('');
   const [schoolSlugInput, setSchoolSlugInput] = useState('');
@@ -53,22 +65,23 @@ export default function App() {
     });
     const { data: { subscription } } = client.auth.onAuthStateChange((_event, nextSession) => {
       setSession(nextSession);
-      if (!nextSession) { setProfile(null); setMemberships([]); setSchoolId(''); }
+      if (!nextSession) { setProfile(null); setMemberships([]); setGuardianSchoolIds([]); setSchoolId(''); setShowSignIn(false); }
     });
     return () => { alive = false; subscription.unsubscribe(); };
   }, []);
 
   useEffect(() => {
     if (!client || !session) {
-      setProfile(null); setMemberships([]); setLoading(false); return;
+      setProfile(null); setMemberships([]); setGuardianSchoolIds([]); setLoading(false); return;
     }
     const supabaseClient = client;
     let alive = true;
     const loadAccount = async () => {
       setLoading(true); setError('');
-      const [profileResult, membershipsResult] = await Promise.all([
+      const [profileResult, membershipsResult, guardianResult] = await Promise.all([
         supabaseClient.from('profiles').select('full_name, platform_role, is_active, must_change_password').eq('id', session.user.id).maybeSingle(),
         supabaseClient.from('school_memberships').select('id, school_id, role, status, schools(name, slug)').eq('user_id', session.user.id).eq('status', 'active'),
+        supabaseClient.from('guardians').select('school_id').eq('user_id', session.user.id),
       ]);
       if (!alive) return;
       if (profileResult.error || membershipsResult.error) {
@@ -79,6 +92,7 @@ export default function App() {
         setProfile(profileResult.data as Profile);
         const activeMemberships = (membershipsResult.data ?? []) as unknown as Membership[];
         setMemberships(activeMemberships);
+        setGuardianSchoolIds((guardianResult.data ?? []).map((item) => item.school_id));
         setSchoolId((current) => current || activeMemberships[0]?.school_id || '');
       }
       setLoading(false);
@@ -245,8 +259,9 @@ export default function App() {
   }
   if (loading) return <main className="auth-shell"><Brand /><div className="loading-card">Loading your secure school workspace…</div></main>;
 
+  if (!session && !showSignIn) return <PublicLandingPage onSignIn={() => setShowSignIn(true)} />;
   if (!session) {
-    return <main className="auth-shell"><Brand /><section className="auth-card"><div className="auth-icon"><QrCode size={25} /></div><p className="eyebrow">WELCOME TO TAGIN</p><h1>Sign in to your school account.</h1><p className="muted">Enter your phone number as usual (for example, 08012345678) and the password provided by your school.</p><form className="auth-form" onSubmit={signIn}><label htmlFor="phone">Phone number</label><input id="phone" type="tel" autoComplete="tel" placeholder="08012345678" inputMode="tel" value={phone} onChange={(event) => setPhone(event.target.value)} required /><label htmlFor="password">Password</label><div className="password-field"><input id="password" type={showPassword ? "text" : "password"} autoComplete="current-password" placeholder="Enter your password" value={password} onChange={(event) => setPassword(event.target.value)} required /><button className="password-toggle" type="button" onClick={() => setShowPassword((visible) => !visible)} aria-label={showPassword ? "Hide password" : "Show password"} aria-pressed={showPassword}>{showPassword ? <EyeOff size={18} /> : <Eye size={18} />}<span>{showPassword ? "Hide" : "Show"}</span></button></div>{error && <p className="form-error" role="alert">{error}</p>}<button className="primary-button" type="submit" disabled={busy}>{busy ? 'Signing in…' : 'Sign in'} <ArrowRight size={17} /></button></form></section><p className="security-note"><ShieldCheck size={14} /> Your school data is protected by role-based access controls.</p></main>;
+    return <main className="auth-shell"><Brand /><button className="login-home-link" type="button" onClick={() => setShowSignIn(false)}>← Back to TagIn home</button><section className="auth-card"><div className="auth-icon"><QrCode size={25} /></div><p className="eyebrow">WELCOME TO TAGIN</p><h1>Sign in to your school account.</h1><p className="muted">Enter your phone number as usual (for example, 08012345678) and the password provided by your school.</p><form className="auth-form" onSubmit={signIn}><label htmlFor="phone">Phone number</label><input id="phone" type="tel" autoComplete="tel" placeholder="08012345678" inputMode="tel" value={phone} onChange={(event) => setPhone(event.target.value)} required /><label htmlFor="password">Password</label><div className="password-field"><input id="password" type={showPassword ? "text" : "password"} autoComplete="current-password" placeholder="Enter your password" value={password} onChange={(event) => setPassword(event.target.value)} required /><button className="password-toggle" type="button" onClick={() => setShowPassword((visible) => !visible)} aria-label={showPassword ? "Hide password" : "Show password"} aria-pressed={showPassword}>{showPassword ? <EyeOff size={18} /> : <Eye size={18} />}<span>{showPassword ? "Hide" : "Show"}</span></button></div>{error && <p className="form-error" role="alert">{error}</p>}<button className="primary-button" type="submit" disabled={busy}>{busy ? 'Signing in…' : 'Sign in'} <ArrowRight size={17} /></button></form><p className="login-reset-note">Forgot your password? Contact your school administrator. TagIn account recovery does not require SMS.</p></section><p className="security-note"><ShieldCheck size={14} /> Your school data is protected by role-based access controls.</p></main>;
   }
   if (profile?.must_change_password) {
     return <main className="auth-shell"><Brand /><section className="auth-card"><div className="auth-icon"><ShieldCheck size={25} /></div><p className="eyebrow">SECURITY CHECK</p><h1>Create your new password.</h1><p className="muted">For your protection, change the temporary password before continuing.</p><form className="auth-form" onSubmit={changePassword}><label htmlFor="new-password">New password</label><input id="new-password" type="password" autoComplete="new-password" minLength={12} placeholder="At least 12 characters" value={newPassword} onChange={(event) => setNewPassword(event.target.value)} required />{error && <p className="form-error" role="alert">{error}</p>}<button className="primary-button" type="submit" disabled={busy}>{busy ? 'Updating…' : 'Update password'} <ArrowRight size={17} /></button></form></section></main>;
@@ -256,16 +271,49 @@ export default function App() {
   const isPlatformAdmin = profile.platform_role === 'super_admin';
   const isSchoolAdmin = selectedMembership?.role === 'school_admin';
   const isUnifiedStaff = selectedMembership?.role === 'staff';
+  const isParent = selectedMembership?.role === 'parent' || guardianSchoolIds.length > 0;
   const hasStaffPermission = (permission: string) => staffPermissions.includes(permission);
+  const canCheckIn = Boolean(selectedMembership && (isSchoolAdmin || selectedMembership.role === 'gate_staff' || (isUnifiedStaff && (hasStaffPermission('gate.scan') || hasStaffPermission('gate.check_in')))));
+  const canCheckOut = Boolean(selectedMembership && (isSchoolAdmin || selectedMembership.role === 'gate_staff' || (isUnifiedStaff && (hasStaffPermission('gate.scan') || hasStaffPermission('gate.check_out')))));
   const role = isPlatformAdmin
     ? 'Platform administrator'
-    : isUnifiedStaff
-      ? `School staff · ${staffJobTitle}`
-      : selectedMembership?.role?.replaceAll('_', ' ') ?? 'School member';
+    : isParent
+      ? 'Parent / guardian'
+      : isUnifiedStaff
+        ? `School staff · ${staffJobTitle}`
+        : selectedMembership?.role?.replaceAll('_', ' ') ?? 'School member';
   const schoolName = selectedMembership?.schools?.name ?? (isPlatformAdmin ? 'All schools' : 'No active school');
   return <main className="workspace-shell">
     <header className="workspace-topbar"><Brand /><div className="account-actions">{!isSchoolAdmin && <span className="user-chip">{profile.full_name}</span>}<button className="icon-button" onClick={signOut} disabled={busy} aria-label="Sign out"><LogOut size={18} /></button></div></header>
-    {showSchoolManagement && isPlatformAdmin ? (
+    {activeWorkspace === 'scores-admin' && isSchoolAdmin && selectedMembership ? (
+      <ScoresWorkspace client={client!} schoolId={selectedMembership.school_id} schoolName={schoolName} mode="admin" userId={session?.user.id} onBack={() => setActiveWorkspace('')} />
+    ) : activeWorkspace === 'scores-teacher' && selectedMembership?.role === 'staff' ? (
+      <ScoresWorkspace client={client!} schoolId={selectedMembership.school_id} schoolName={schoolName} mode="teacher" membershipId={selectedMembership.id} userId={session?.user.id} onBack={() => setActiveWorkspace('')} />
+    ) : activeWorkspace === 'scores-parent' && isParent && session && (selectedMembership?.school_id || guardianSchoolIds[0]) ? (
+      <ScoresWorkspace client={client!} schoolId={selectedMembership?.school_id ?? guardianSchoolIds[0]} schoolName={selectedMembership?.schools?.name ?? 'Your school'} mode="parent" userId={session.user.id} onBack={() => setActiveWorkspace('')} />
+    ) : activeWorkspace === 'timetable-admin' && isSchoolAdmin && selectedMembership ? (
+      <TimetableWorkspace client={client!} schoolId={selectedMembership.school_id} schoolName={schoolName} mode="admin" userId={session?.user.id} onBack={() => setActiveWorkspace('')} />
+    ) : activeWorkspace === 'timetable-teacher' && selectedMembership?.role === 'staff' ? (
+      <TimetableWorkspace client={client!} schoolId={selectedMembership.school_id} schoolName={schoolName} mode="teacher" membershipId={selectedMembership.id} userId={session?.user.id} onBack={() => setActiveWorkspace('')} />
+    ) : activeWorkspace === 'timetable-parent' && isParent && session && (selectedMembership?.school_id || guardianSchoolIds[0]) ? (
+      <TimetableWorkspace client={client!} schoolId={selectedMembership?.school_id ?? guardianSchoolIds[0]} schoolName={selectedMembership?.schools?.name ?? 'Your school'} mode="parent" userId={session.user.id} onBack={() => setActiveWorkspace('')} />
+    ) : activeWorkspace === 'transport-admin' && isSchoolAdmin && selectedMembership ? (
+      <TransportWorkspace client={client!} schoolId={selectedMembership.school_id} schoolName={schoolName} mode="admin" onBack={() => setActiveWorkspace('')} />
+    ) : activeWorkspace === 'transport-driver' && selectedMembership?.role === 'bus_staff' ? (
+      <TransportWorkspace client={client!} schoolId={selectedMembership.school_id} schoolName={schoolName} mode="driver" membershipId={selectedMembership.id} onBack={() => setActiveWorkspace('')} />
+    ) : activeWorkspace === 'families' && isSchoolAdmin && selectedMembership ? (
+      <FamilyWorkspace client={client!} mode="admin" schoolId={selectedMembership.school_id} schoolName={schoolName} userId={session?.user.id ?? ''} onBack={() => setActiveWorkspace('')} />
+    ) : activeWorkspace === 'family' && isParent && session ? (
+      <FamilyWorkspace client={client!} mode="parent" userId={session.user.id} onBack={() => setActiveWorkspace('')} />
+    ) : activeWorkspace === 'staff' && isSchoolAdmin && selectedMembership ? (
+      <StaffWorkspace client={client!} schoolId={selectedMembership.school_id} schoolName={schoolName} onBack={() => setActiveWorkspace('')} />
+    ) : activeWorkspace === 'attendance' && selectedMembership && session ? (
+      <AttendanceWorkspace client={client!} schoolId={selectedMembership.school_id} schoolName={selectedMembership.schools?.name ?? 'Your school'} actorName={profile.full_name} canCheckIn={canCheckIn} canCheckOut={canCheckOut} onBack={() => setActiveWorkspace('')} />
+    ) : activeWorkspace === 'students-advanced' && isSchoolAdmin && selectedMembership && session ? (
+      <AdvancedStudentWorkspace client={client!} schoolId={selectedMembership.school_id} schoolName={selectedMembership.schools?.name ?? 'Your school'} userId={session.user.id} onBack={() => setActiveWorkspace('')} />
+    ) : activeWorkspace === 'students' && isSchoolAdmin && selectedMembership ? (
+      <StudentDirectory client={client!} schoolId={selectedMembership.school_id} schoolName={selectedMembership.schools?.name ?? 'Your school'} onBack={() => setActiveWorkspace('')} />
+    ) : showSchoolManagement && isPlatformAdmin ? (
       <section className="management-panel management-page">
         <div className="management-heading"><div><p className="eyebrow">PLATFORM ADMINISTRATION</p><h1>School management</h1><p className="muted">Create school workspaces and manage their access status.</p></div><button className="secondary-button" type="button" onClick={() => { setError(''); setShowSchoolManagement(false); }}>Back to dashboard</button></div>
         {error && <p className="form-error" role="alert">{error}</p>}
@@ -280,12 +328,22 @@ export default function App() {
         {error && <p className="form-error" role="alert">{error}</p>}
         <section className="workspace-section"><p className="eyebrow">YOUR WORKSPACE</p><h2>{isPlatformAdmin ? 'Platform overview' : 'School operations'}</h2><div className="workspace-grid">
           {isPlatformAdmin && <WorkspaceCard icon={<ShieldCheck />} title="School management" description="Create and manage school workspaces and administrators." actionLabel="Manage schools" onAction={() => { setError(''); setShowSchoolManagement(true); }} />}
-          {(isPlatformAdmin || isSchoolAdmin || (isUnifiedStaff && (hasStaffPermission('students.create') || hasStaffPermission('students.update') || hasStaffPermission('registers.manage')))) && <WorkspaceCard icon={<Users />} title={isUnifiedStaff ? 'Student registers' : 'People and students'} description={isUnifiedStaff ? 'Manage the student records and class registers assigned to you.' : 'Manage student records, families, and staff access.'} />}
-          {(isPlatformAdmin || isSchoolAdmin || (isUnifiedStaff && (hasStaffPermission('gate.scan') || hasStaffPermission('gate.check_in') || hasStaffPermission('gate.check_out'))) || selectedMembership?.role === 'gate_staff') && <WorkspaceCard icon={<QrCode />} title="Gate check-in" description="Scan student tags and record authorized arrival and departure activity." />}
-          {(isPlatformAdmin || isSchoolAdmin || (isUnifiedStaff && (hasStaffPermission('transport.view_assigned') || hasStaffPermission('transport.board') || hasStaffPermission('transport.drop_off'))) || selectedMembership?.role === 'bus_staff') && <WorkspaceCard icon={<BusFront />} title="Transport" description="View assigned journeys and record student boarding and drop-off." />}
+          {isSchoolAdmin && <WorkspaceCard icon={<ShieldCheck />} title="Advanced student records" description="Manage private student profiles, emergency contacts, medical alerts and confidential incident follow-up." actionLabel="Open private records" onAction={() => setActiveWorkspace('students-advanced')} />}
+          {(isPlatformAdmin || isSchoolAdmin || (isUnifiedStaff && (hasStaffPermission('students.create') || hasStaffPermission('students.update') || hasStaffPermission('registers.manage')))) && <WorkspaceCard icon={<Users />} title={isUnifiedStaff ? 'Student registers' : 'Students'} description={isUnifiedStaff ? 'View the student records and class registers assigned to you.' : 'Manage student records and school registers.'} actionLabel="Manage students" onAction={isSchoolAdmin ? () => setActiveWorkspace('students') : undefined} />}
+          {isSchoolAdmin && <WorkspaceCard icon={<Users />} title="Staff management" description="Create teacher and gate staff accounts, manage access and review staff permissions." actionLabel="Manage staff" onAction={() => setActiveWorkspace('staff')} />}
+          {isSchoolAdmin && <WorkspaceCard icon={<HeartHandshake />} title="Parents and guardians" description="Create parent logins and securely link each family to its student records." actionLabel="Manage families" onAction={() => setActiveWorkspace('families')} />}
+          {(isSchoolAdmin || isUnifiedStaff && (hasStaffPermission('gate.scan') || hasStaffPermission('gate.check_in') || hasStaffPermission('gate.check_out')) || selectedMembership?.role === 'gate_staff') && <WorkspaceCard icon={<QrCode />} title="Gate check-in" description="Search students and record school arrival and departure with staff attribution." actionLabel="Open attendance" onAction={() => setActiveWorkspace('attendance')} />}
+          {isSchoolAdmin && <WorkspaceCard icon={<Award />} title="Scores & assessments" description="Create assessments, manage class scores and publish results to parents." actionLabel="Manage assessments" onAction={() => setActiveWorkspace('scores-admin')} />}
+          {selectedMembership?.role === 'staff' && <WorkspaceCard icon={<Award />} title="My assessments" description="Enter scores for assessments assigned to your teacher account." actionLabel="Open assessments" onAction={() => setActiveWorkspace('scores-teacher')} />}
+          {isSchoolAdmin && <WorkspaceCard icon={<ClipboardList />} title="Timetable management" description="Create weekly class schedules, assign teachers and organise lesson times." actionLabel="Manage timetable" onAction={() => setActiveWorkspace('timetable-admin')} />}
+          {isUnifiedStaff && <WorkspaceCard icon={<ClipboardList />} title="My teaching timetable" description="View the lessons assigned to your teacher account." actionLabel="View timetable" onAction={() => setActiveWorkspace('timetable-teacher')} />}
+          {isSchoolAdmin && <WorkspaceCard icon={<BusFront />} title="Transport management" description="Manage school vehicles, routes, stops, drivers and student allocations." actionLabel="Manage transport" onAction={() => setActiveWorkspace('transport-admin')} />}
+          {selectedMembership?.role === 'bus_staff' && <WorkspaceCard icon={<BusFront />} title="My transport journeys" description="View your assigned routes and record student pickup and drop-off." actionLabel="Open driver workspace" onAction={() => setActiveWorkspace('transport-driver')} />}
           {(isPlatformAdmin || isSchoolAdmin) && <WorkspaceCard icon={<ClipboardList />} title="Reports and overview" description="Review attendance, school activity, and operational reports." />}
-          {(isPlatformAdmin || selectedMembership?.role === 'parent') && <WorkspaceCard icon={<Bell />} title="Family updates" description="View your children's arrival, departure, and transport notifications." />}
-          {!isPlatformAdmin && !selectedMembership && <WorkspaceCard icon={<ShieldCheck />} title="No school assigned" description="Your account is active, but no active school membership was found. Contact your administrator." />}
+          {isParent && (selectedMembership?.role === 'parent' || guardianSchoolIds.length > 0) && <WorkspaceCard icon={<Award />} title="Children's results" description="View published assessment scores and teacher remarks for your linked children." actionLabel="View results" onAction={() => setActiveWorkspace('scores-parent')} />}
+          {isParent && (selectedMembership?.role === 'parent' || guardianSchoolIds.length > 0) && <WorkspaceCard icon={<CalendarDays />} title="Children's timetable" description="View the weekly class schedule for your linked children." actionLabel="View timetable" onAction={() => setActiveWorkspace('timetable-parent')} />}
+          {isParent && <WorkspaceCard icon={<Bell />} title="Family updates" description="View your linked children's school arrival, departure, and attendance notifications." actionLabel="Open family portal" onAction={() => setActiveWorkspace('family')} />}
+          {!isPlatformAdmin && !selectedMembership && !isParent && <WorkspaceCard icon={<ShieldCheck />} title="No school assigned" description="Your account is active, but no active school membership was found. Contact your administrator." />}
         </div></section>
       </>
     )}
