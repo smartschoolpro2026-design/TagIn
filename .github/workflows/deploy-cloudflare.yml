@@ -26,10 +26,10 @@ jobs:
       - name: Build production frontend
         run: npm run build
 
-      - name: Deploy TagIn Worker
+      - name: Deploy TagIn Worker and static assets
         uses: cloudflare/wrangler-action@v3
         with:
           apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
-          accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          accountId: 29d87186e44e5f660341e2e5cb428627
           wranglerVersion: "4.168.0"
           command: deploy
