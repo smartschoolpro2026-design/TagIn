@@ -21,7 +21,7 @@ export function TimetableWorkspace({client,schoolId,schoolName,mode,membershipId
   ]);
   if(e.error){setError('Timetable could not be loaded. Confirm your school access is active.');setEntries([]);}
   else setEntries((e.data??[]) as unknown as Entry[]);
-  if(mode==='admin'){if(t.error)setError('Teacher list could not be loaded.');else setTeachers((t.data??[]) as unknown as Teacher[]);if(s.error)setError('Class list could not be loaded.');else setClasses([...new Set((s.data??[]).map((x:Student)=>x.class_name).filter((x:string|null):x is string=>!!x?.trim()))].sort());}
+  if(mode==='admin'){if(t.error)setError('Teacher list could not be loaded.');else setTeachers((t.data??[]) as unknown as Teacher[]);if(s.error)setError('Class list could not be loaded.');else {const classNames: string[]=(s.data??[]).map((x:Student)=>x.class_name).filter((x):x is string=>typeof x==='string'&&x.trim().length>0);setClasses([...new Set<string>(classNames)].sort());}}
   setLoading(false);
  }
  useEffect(()=>{void load();},[client,schoolId,mode,membershipId,userId]);
