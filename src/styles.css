@@ -175,3 +175,23 @@
 .attendance-camera-guide span{width:100%;height:1px;background:rgba(53,229,145,.85);box-shadow:0 0 12px #35e591}
 .attendance-camera-frame p{position:absolute;left:12px;right:12px;bottom:8px;margin:0;text-align:center;color:white;font-size:12px;text-shadow:0 1px 4px #000}
 @media(max-width:600px){.attendance-scan-card{padding:16px;border-radius:16px}.attendance-scan-button,.attendance-scan-close{width:100%}.attendance-scan-copy h2{font-size:16px}}
+
+/* Printable, one-time student QR identity card */
+.student-qr-action{display:inline-flex;align-items:center;gap:6px}
+.tagin-qr-overlay{position:fixed;z-index:1000;inset:0;display:grid;place-items:center;padding:18px;background:rgba(5,22,16,.68);backdrop-filter:blur(5px)}
+.tagin-qr-card{position:relative;width:min(100%,430px);padding:28px 24px;border-radius:22px;background:#fff;text-align:center;box-shadow:0 24px 80px rgba(0,0,0,.24)}
+.tagin-qr-card h2{margin:8px 0 4px;color:#153f32;font-size:23px}
+.tagin-qr-card>.muted{margin:0 0 18px;font-size:13px}
+.tagin-qr-close{position:absolute;right:14px;top:14px;width:38px;height:38px;display:grid;place-items:center;border:0;border-radius:12px;background:#eef4ef;color:#214b3c}
+.tagin-qr-image{display:flex;justify-content:center;align-items:center;min-height:260px;margin:0 auto 16px;padding:8px}
+.tagin-qr-image img,.tagin-qr-image canvas{max-width:100%;height:auto!important}
+.tagin-qr-note{max-width:320px;margin:0 auto 18px;color:#65786e;font-size:12px;line-height:1.6}
+.tagin-qr-actions{display:flex;justify-content:center;gap:10px;flex-wrap:wrap}
+.tagin-qr-actions button{display:inline-flex;align-items:center;gap:8px}
+@media print{
+ body *{visibility:hidden!important}
+ .tagin-qr-overlay,.tagin-qr-overlay *{visibility:visible!important}
+ .tagin-qr-overlay{position:absolute;inset:0;padding:0;background:#fff;backdrop-filter:none}
+ .tagin-qr-card{width:100%;max-width:none;border-radius:0;box-shadow:none}
+ .tagin-qr-close,.tagin-qr-actions{display:none!important}
+}
