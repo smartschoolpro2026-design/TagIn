@@ -158,8 +158,29 @@ export function ActivityAuditWorkspace({ client, session, schoolId, schoolName, 
     if (!session.user.email) { setError('This account has no email sign-in identity available for password verification. Export is blocked for security.'); return; }
     if (!password) { setError('Enter your current login password to export this report.'); return; }
     setExporting(true); setError(''); setNotice('');
-    const { error: verifyError } = await client.auth.signInWithPassword({ email: session.user.email, password });
-    if (verifyError) {
+    // Verify credentials through a one-off Auth HTTP request. Do not call
+    // client.auth.signInWithPassword here: it replaces the app session, emits
+    // SIGNED_IN, and causes App to reload/unmount this workspace before the
+    // verified report can be displayed.
+    let passwordValid = false;
+    try {
+      const verifyResponse = await fetch(`${client.supabaseUrl}/auth/v1/token?grant_type=password`, {
+        method: 'POST',
+        headers: {
+          apikey: client.supabaseKey,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ email: session.user.email, password }),
+      });
+      passwordValid = verifyResponse.ok;
+      // Discard the temporary response; never install this session in the app.
+      await verifyResponse.text();
+    } catch {
+      setError('TagIn could not verify your password because the connection failed. Please try again.');
+      setExporting(false);
+      return;
+    }
+    if (!passwordValid) {
       await client.rpc('record_audit_export_attempt', { p_school_id: platformAdmin ? (selectedSchool || null) : (schoolId ?? null), p_format: 'csv', p_record_count: filtered.length, p_filters: { category, from: fromDate || null, to: toDate || null }, p_success: false });
       setError('Password verification failed. No report was downloaded.');
       setExporting(false);
