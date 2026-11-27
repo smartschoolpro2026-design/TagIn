@@ -19,7 +19,7 @@ export function StudentQrCard({ referenceCode, token, onClose }: Props) {
     if (!window.QRCode) { setError('The QR code generator could not be loaded. Refresh and try again.'); return; }
     try {
       new window.QRCode(target.current, {
-        text: 'TAGIN:' + token,
+        text: 'https://tagin.smartschoolpro2026.workers.dev/scan?code=' + encodeURIComponent('TAGIN:' + token),
         width: 248,
         height: 248,
         colorDark: '#123f30',
