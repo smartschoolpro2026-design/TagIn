@@ -1,11 +1,12 @@
 import { useEffect, useMemo, useState, type FormEvent, type ReactNode } from 'react';
 import {
-  ArrowRight, Award, Bell, BusFront, CalendarDays, CheckCircle2, ClipboardList, GraduationCap, HeartHandshake,
+  ArrowRight, Award, Bell, BusFront, CalendarDays, CheckCircle2, ClipboardList, GraduationCap, HeartHandshake, ShieldCheck,
   Eye, EyeOff, LogOut, QrCode, ShieldCheck, Users,
 } from 'lucide-react';
 import type { Session } from '@supabase/supabase-js';
 import { isSupabaseConfigured, supabase } from './lib/supabase';
 import { StudentDirectory } from './components/StudentDirectory';
+import { AdvancedStudentWorkspace } from './components/AdvancedStudentWorkspace';
 import { AttendanceWorkspace } from './components/AttendanceWorkspace';
 import { StaffWorkspace } from './components/StaffWorkspace';
 import { FamilyWorkspace } from './components/FamilyWorkspace';
@@ -44,7 +45,7 @@ export default function App() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [showSchoolManagement, setShowSchoolManagement] = useState(false);
-  const [activeWorkspace, setActiveWorkspace] = useState<'students' | 'attendance' | 'staff' | 'families' | 'family' | 'transport-admin' | 'transport-driver' | 'timetable-admin' | 'timetable-teacher' | 'timetable-parent' | 'scores-admin' | 'scores-teacher' | 'scores-parent' | ''>('');
+  const [activeWorkspace, setActiveWorkspace] = useState<'students' | 'attendance' | 'staff' | 'families' | 'family' | 'transport-admin' | 'transport-driver' | 'timetable-admin' | 'timetable-teacher' | 'timetable-parent' | 'scores-admin' | 'scores-teacher' | 'scores-parent' | 'students-advanced' | ''>('');
   const [schools, setSchools] = useState<School[]>([]);
   const [schoolNameInput, setSchoolNameInput] = useState('');
   const [schoolSlugInput, setSchoolSlugInput] = useState('');
@@ -305,6 +306,8 @@ export default function App() {
       <StaffWorkspace client={client!} schoolId={selectedMembership.school_id} schoolName={schoolName} onBack={() => setActiveWorkspace('')} />
     ) : activeWorkspace === 'attendance' && selectedMembership && session ? (
       <AttendanceWorkspace client={client!} schoolId={selectedMembership.school_id} schoolName={selectedMembership.schools?.name ?? 'Your school'} actorName={profile.full_name} canCheckIn={canCheckIn} canCheckOut={canCheckOut} onBack={() => setActiveWorkspace('')} />
+    ) : activeWorkspace === 'students-advanced' && isSchoolAdmin && selectedMembership && session ? (
+      <AdvancedStudentWorkspace client={client!} schoolId={selectedMembership.school_id} schoolName={selectedMembership.schools?.name ?? 'Your school'} userId={session.user.id} onBack={() => setActiveWorkspace('')} />
     ) : activeWorkspace === 'students' && isSchoolAdmin && selectedMembership ? (
       <StudentDirectory client={client!} schoolId={selectedMembership.school_id} schoolName={selectedMembership.schools?.name ?? 'Your school'} onBack={() => setActiveWorkspace('')} />
     ) : showSchoolManagement && isPlatformAdmin ? (
@@ -322,6 +325,7 @@ export default function App() {
         {error && <p className="form-error" role="alert">{error}</p>}
         <section className="workspace-section"><p className="eyebrow">YOUR WORKSPACE</p><h2>{isPlatformAdmin ? 'Platform overview' : 'School operations'}</h2><div className="workspace-grid">
           {isPlatformAdmin && <WorkspaceCard icon={<ShieldCheck />} title="School management" description="Create and manage school workspaces and administrators." actionLabel="Manage schools" onAction={() => { setError(''); setShowSchoolManagement(true); }} />}
+          {isSchoolAdmin && <WorkspaceCard icon={<ShieldCheck />} title="Advanced student records" description="Manage private student profiles, emergency contacts, medical alerts and confidential incident follow-up." actionLabel="Open private records" onAction={() => setActiveWorkspace('students-advanced')} />}
           {(isPlatformAdmin || isSchoolAdmin || (isUnifiedStaff && (hasStaffPermission('students.create') || hasStaffPermission('students.update') || hasStaffPermission('registers.manage')))) && <WorkspaceCard icon={<Users />} title={isUnifiedStaff ? 'Student registers' : 'Students'} description={isUnifiedStaff ? 'View the student records and class registers assigned to you.' : 'Manage student records and school registers.'} actionLabel="Manage students" onAction={isSchoolAdmin ? () => setActiveWorkspace('students') : undefined} />}
           {isSchoolAdmin && <WorkspaceCard icon={<Users />} title="Staff management" description="Create teacher and gate staff accounts, manage access and review staff permissions." actionLabel="Manage staff" onAction={() => setActiveWorkspace('staff')} />}
           {isSchoolAdmin && <WorkspaceCard icon={<HeartHandshake />} title="Parents and guardians" description="Create parent logins and securely link each family to its student records." actionLabel="Manage families" onAction={() => setActiveWorkspace('families')} />}
