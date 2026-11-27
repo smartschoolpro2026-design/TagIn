@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState, type FormEvent } from 'react';
 import type { SupabaseClient } from '@supabase/supabase-js';
-import { ArrowLeft, BookOpen, Plus, Search, UserRound, Users, X } from 'lucide-react';
+import { ArrowLeft, BookOpen, Plus, QrCode, Search, UserRound, Users, X } from 'lucide-react';
+import { StudentQrCard } from './StudentQrCard';
 
 type Student = {
   id: string;
@@ -29,6 +30,8 @@ export function StudentDirectory({ client, schoolId, schoolName, onBack }: Props
   const [fullName, setFullName] = useState('');
   const [className, setClassName] = useState('');
   const [level, setLevel] = useState('');
+  const [qrStudent, setQrStudent] = useState<Student | null>(null);
+  const [qrToken, setQrToken] = useState('');
 
   useEffect(() => {
     let alive = true;
@@ -113,6 +116,32 @@ export function StudentDirectory({ client, schoolId, schoolName, onBack }: Props
     setBusy(false);
   }
 
+  async function issueStudentQr(student: Student) {
+    if (!student.active || busy) return;
+    setBusy(true); setError(''); setNotice(''); setQrStudent(null); setQrToken('');
+    try {
+      const bytes = crypto.getRandomValues(new Uint8Array(32));
+      const token = btoa(String.fromCharCode(...bytes)).replace(/\\+/g, '-').replace(/\\//g, '_').replace(/=+$/g, '');
+      const digest = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(token));
+      const tokenHash = Array.from(new Uint8Array(digest)).map((b) => b.toString(16).padStart(2, '0')).join('');
+      const { data: tag, error: insertError } = await client.from('tags')
+        .insert({ school_id: schoolId, student_id: student.id, token_hash: tokenHash, status: 'active' })
+        .select('id').single();
+      if (insertError || !tag) throw new Error('The student QR tag could not be issued. Check administrator access and try again.');
+      const { error: revokeError } = await client.from('tags')
+        .update({ status: 'revoked', revoked_at: new Date().toISOString() })
+        .eq('school_id', schoolId).eq('student_id', student.id).eq('status', 'active').neq('id', tag.id);
+      if (revokeError) {
+        await client.from('tags').update({ status: 'revoked', revoked_at: new Date().toISOString() }).eq('id', tag.id);
+        throw new Error('The previous student code could not be safely replaced. No new code was issued.');
+      }
+      setQrStudent(student); setQrToken(token);
+      setNotice('A new student QR code has been issued. Previous codes for this student are now revoked.');
+    } catch (e) {
+      setError(e instanceof Error ? e.message : 'The student QR code could not be issued.');
+    } finally { setBusy(false); }
+  }
+
   return (
     <section className="student-directory">
       <div className="student-page-heading">
@@ -156,12 +185,13 @@ export function StudentDirectory({ client, schoolId, schoolName, onBack }: Props
         {loading ? <div className="student-empty">Loading student register…</div> : filteredStudents.length === 0 ? (
           <div className="student-empty">{students.length === 0 ? 'No students have been registered yet. Add the first student to begin.' : 'No students match your search.'}</div>
         ) : (
-          <div className="student-table-wrap"><table className="student-table"><thead><tr><th>Student</th><th>Class</th><th>Level</th><th>Status</th><th>Action</th></tr></thead><tbody>
-            {filteredStudents.map((student) => <tr key={student.id}><td><strong>{student.full_name}</strong><span className="student-id">Student record</span></td><td>{student.class_name || '—'}</td><td>{student.level || '—'}</td><td><span className={student.active ? 'student-status active' : 'student-status inactive'}>{student.active ? 'Active' : 'Inactive'}</span></td><td><button className="student-row-action" type="button" disabled={busy} onClick={() => void toggleStudent(student)}>{student.active ? 'Deactivate' : 'Reactivate'}</button></td></tr>)}
+          <div className="student-table-wrap"><table className="student-table"><thead><tr><th>Student</th><th>Class</th><th>Level</th><th>Status</th><th>QR code</th><th>Action</th></tr></thead><tbody>
+            {filteredStudents.map((student) => <tr key={student.id}><td><strong>{student.full_name}</strong><span className="student-id">Student record</span></td><td>{student.class_name || '—'}</td><td>{student.level || '—'}</td><td><span className={student.active ? 'student-status active' : 'student-status inactive'}>{student.active ? 'Active' : 'Inactive'}</span></td><td><button className="student-row-action student-qr-action" type="button" disabled={busy||!student.active} onClick={() => void issueStudentQr(student)}><QrCode size={14}/> {student.active?'Issue QR':'Unavailable'}</button></td><td><button className="student-row-action" type="button" disabled={busy} onClick={() => void toggleStudent(student)}>{student.active ? 'Deactivate' : 'Reactivate'}</button></td></tr>)}
           </tbody></table></div>
         )}
       </div>
       <p className="student-footnote">Student records are retained when marked inactive. Attendance history is not deleted.</p>
+      {qrStudent&&qrToken&&<StudentQrCard studentName={qrStudent.full_name} className={qrStudent.class_name} token={qrToken} onClose={()=>{setQrStudent(null);setQrToken('');}}/>}
     </section>
   );
 }
