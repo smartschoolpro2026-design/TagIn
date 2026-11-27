@@ -8,9 +8,9 @@ type QRCodeConstructor = {
 declare global {
   interface Window { QRCode?: QRCodeConstructor }
 }
-type Props = { studentName: string; className: string | null; token: string; onClose: () => void };
+type Props = { referenceCode: string; token: string; onClose: () => void };
 
-export function StudentQrCard({ studentName, className, token, onClose }: Props) {
+export function StudentQrCard({ referenceCode, token, onClose }: Props) {
   const target = useRef<HTMLDivElement | null>(null);
   const [error, setError] = useState('');
   useEffect(() => {
@@ -31,13 +31,12 @@ export function StudentQrCard({ studentName, className, token, onClose }: Props)
     }
     return () => { if (target.current) target.current.innerHTML = ''; };
   }, [token]);
-  return <div className="tagin-qr-overlay" role="dialog" aria-modal="true" aria-label="Student TagIn QR code">
+  return <div className="tagin-qr-overlay" role="dialog" aria-modal="true" aria-label="Anonymous student TagIn QR pass">
     <section className="tagin-qr-card">
       <button className="tagin-qr-close" type="button" onClick={onClose} aria-label="Close QR code"><X size={19}/></button>
-      <p className="eyebrow">STUDENT IDENTITY · TAGIN</p>
-      <h2>{studentName}</h2>
-      <p className="muted">{className || 'Class not set'} · Student access code</p>
+      <p className="eyebrow">TAGIN · STUDENT PASS</p>
       <div className="tagin-qr-image" ref={target}/>
+      <p className="tagin-bulk-reference-label">STUDENT REFERENCE</p><strong className="tagin-bulk-reference">{referenceCode}</strong>
       {error && <p className="form-error" role="alert">{error}</p>}
       <p className="tagin-qr-note">Keep this code with the student. Staff can scan it from their TagIn dashboard. If it is lost, issue a replacement to revoke the previous code.</p>
       <div className="tagin-qr-actions">
