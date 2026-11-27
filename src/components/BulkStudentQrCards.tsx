@@ -6,7 +6,7 @@ type QRCodeConstructor = {
   CorrectLevel?: { M: number };
 };
 declare global { interface Window { QRCode?: QRCodeConstructor } }
-export type BulkQrStudent = { id: string; full_name: string; class_name: string | null; level: string | null; token: string };
+export type BulkQrStudent = { id: string; full_name: string; class_name: string | null; level: string | null; token: string; reference_code: string };
 type Props = { schoolName: string; classLabel: string; students: BulkQrStudent[]; onClose: () => void };
 
 export function BulkStudentQrCards({ schoolName, classLabel, students, onClose }: Props) {
@@ -31,9 +31,10 @@ export function BulkStudentQrCards({ schoolName, classLabel, students, onClose }
       </header>
       {error && <p className="form-error" role="alert">{error}</p>}
       <div className="tagin-bulk-qr-grid" ref={root}>{students.map(student => <article className="tagin-bulk-qr-card" key={student.id}>
-        <p className="tagin-bulk-brand">TagIn</p><h3>{student.full_name}</h3><p className="tagin-bulk-class">{student.class_name || classLabel}{student.level ? ' · ' + student.level : ''}</p>
+        <p className="tagin-bulk-brand">TagIn</p>
         <div className="tagin-bulk-qr-image" data-qr-token={student.token}/>
-        <p className="tagin-bulk-school">{schoolName}</p><small>Student bag tag · Keep this code secure</small>
+        <p className="tagin-bulk-reference-label">STUDENT REFERENCE</p><strong className="tagin-bulk-reference">{student.reference_code}</strong>
+        <small>Keep this code secure</small>
       </article>)}</div>
       <footer className="tagin-qr-actions tagin-bulk-qr-actions"><button className="primary-button" type="button" onClick={() => window.print()}><Printer size={16}/> Print all cards</button><button className="secondary-button" type="button" onClick={onClose}>Done</button></footer>
     </section>
