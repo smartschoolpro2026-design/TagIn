@@ -286,7 +286,7 @@ export default function App() {
       <TimetableWorkspace client={client!} schoolId={selectedMembership.school_id} schoolName={schoolName} mode="teacher" membershipId={selectedMembership.id} userId={session?.user.id} onBack={() => setActiveWorkspace('')} />
     ) : activeWorkspace === 'timetable-parent' && isParent && session && (selectedMembership?.school_id || guardianSchoolIds[0]) ? (
       <TimetableWorkspace client={client!} schoolId={selectedMembership?.school_id ?? guardianSchoolIds[0]} schoolName={selectedMembership?.schools?.name ?? 'Your school'} mode="parent" userId={session.user.id} onBack={() => setActiveWorkspace('')} />
-    ) :     {activeWorkspace === 'transport-admin' && isSchoolAdmin && selectedMembership ? (
+    ) : activeWorkspace === 'transport-admin' && isSchoolAdmin && selectedMembership ? (
       <TransportWorkspace client={client!} schoolId={selectedMembership.school_id} schoolName={schoolName} mode="admin" onBack={() => setActiveWorkspace('')} />
     ) : activeWorkspace === 'transport-driver' && selectedMembership?.role === 'bus_staff' ? (
       <TransportWorkspace client={client!} schoolId={selectedMembership.school_id} schoolName={schoolName} mode="driver" membershipId={selectedMembership.id} onBack={() => setActiveWorkspace('')} />
