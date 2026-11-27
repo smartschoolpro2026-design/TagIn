@@ -152,3 +152,11 @@
 .brand>span:last-child{text-transform:none!important;letter-spacing:-.8px}
 .auth-shell>.brand .brand-logo{width:54px;height:54px;flex-basis:54px}
 @media(max-width:700px){.workspace-topbar .brand-logo{width:40px;height:40px;flex-basis:40px}}
+
+/* One consistent full TagIn wordmark across landing, sign-in and workspaces */
+.brand-logo{width:150px;height:auto;flex:0 0 auto;object-fit:contain}
+.auth-shell>.brand .brand-logo{width:min(230px,70vw);height:auto;flex:0 1 auto}
+.workspace-topbar .brand-logo{width:138px;height:auto;flex:0 1 auto}
+.public-brand{letter-spacing:0;font-size:0}
+.public-brand-logo{display:block;width:142px;height:auto;object-fit:contain}
+@media(max-width:700px){.auth-shell>.brand .brand-logo{width:min(215px,72vw)}.workspace-topbar .brand-logo{width:128px}.public-brand-logo{width:125px}}
