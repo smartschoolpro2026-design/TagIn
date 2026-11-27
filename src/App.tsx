@@ -16,8 +16,10 @@ import { ScoresWorkspace } from './components/ScoresWorkspace';
 import { PublicLandingPage } from './components/PublicLandingPage';
 import { ParentDashboard } from './components/ParentDashboard';
 import { ActivityAuditWorkspace } from './components/ActivityAuditWorkspace';
+import { TeacherWorkspace } from './components/TeacherWorkspace';
+import { ClassManagementWorkspace } from './components/ClassManagementWorkspace';
 
-type Workspace = 'students' | 'attendance' | 'staff' | 'families' | 'family' | 'transport-admin' | 'transport-driver' | 'timetable-admin' | 'timetable-teacher' | 'timetable-parent' | 'scores-admin' | 'scores-teacher' | 'scores-parent' | 'students-advanced' | 'attendance-scan' | 'activity-audit' | '';
+type Workspace = 'teacher' | 'classes' | 'students' | 'attendance' | 'staff' | 'families' | 'family' | 'transport-admin' | 'transport-driver' | 'timetable-admin' | 'timetable-teacher' | 'timetable-parent' | 'scores-admin' | 'scores-teacher' | 'scores-parent' | 'students-advanced' | 'attendance-scan' | 'activity-audit' | '';
 type Profile = {
   full_name: string;
   platform_role: 'user' | 'super_admin';
@@ -51,7 +53,7 @@ export default function App() {
   const [roleMode, setRoleMode] = useState<'choose'|'staff'|'parent'|''>('');
   const [error, setError] = useState('');
   const [showSchoolManagement, setShowSchoolManagement] = useState(() => sessionStorage.getItem('tagin:last-view') === 'school-management');
-  const [activeWorkspace, setActiveWorkspace] = useState<Workspace>(() => { const saved=sessionStorage.getItem('tagin:last-view') ?? ''; const allowed: Workspace[]=['students','attendance','staff','families','family','transport-admin','transport-driver','timetable-admin','timetable-teacher','timetable-parent','scores-admin','scores-teacher','scores-parent','students-advanced','attendance-scan','activity-audit']; return allowed.includes(saved as Workspace)?saved as Workspace:''; });
+  const [activeWorkspace, setActiveWorkspace] = useState<Workspace>(() => { const saved=sessionStorage.getItem('tagin:last-view') ?? ''; const allowed: Workspace[]=['teacher','classes','students','attendance','staff','families','family','transport-admin','transport-driver','timetable-admin','timetable-teacher','timetable-parent','scores-admin','scores-teacher','scores-parent','students-advanced','attendance-scan','activity-audit']; return allowed.includes(saved as Workspace)?saved as Workspace:''; });
   const [schools, setSchools] = useState<School[]>([]);
   const [schoolNameInput, setSchoolNameInput] = useState('');
   const [schoolSlugInput, setSchoolSlugInput] = useState('');
@@ -398,6 +400,10 @@ export default function App() {
       <FamilyWorkspace client={client!} mode="parent" userId={session.user.id} onBack={() => setActiveWorkspace('')} />
     ) : activeWorkspace === 'staff' && isSchoolAdmin && selectedMembership ? (
       <StaffWorkspace client={client!} schoolId={selectedMembership.school_id} schoolName={schoolName} onBack={() => setActiveWorkspace('')} />
+    ) : activeWorkspace === 'classes' && isSchoolAdmin && selectedMembership && session ? (
+      <ClassManagementWorkspace client={client!} schoolId={selectedMembership.school_id} schoolName={schoolName} userId={session.user.id} onBack={() => setActiveWorkspace('')} onOpenStudents={() => setActiveWorkspace('students')} />
+    ) : activeWorkspace === 'teacher' && selectedMembership?.role === 'staff' ? (
+      <TeacherWorkspace client={client!} schoolId={selectedMembership.school_id} schoolName={schoolName} membershipId={selectedMembership.id} onBack={() => setActiveWorkspace('')} />
     ) : (activeWorkspace === 'attendance' || activeWorkspace === 'attendance-scan') && selectedMembership && session ? (
       <AttendanceWorkspace client={client!} schoolId={selectedMembership.school_id} schoolName={selectedMembership.schools?.name ?? 'Your school'} actorName={profile.full_name} canCheckIn={canCheckIn} canCheckOut={canCheckOut} startInScanMode={activeWorkspace === 'attendance-scan'} onBack={() => setActiveWorkspace('')} />
     ) : activeWorkspace === 'students-advanced' && isSchoolAdmin && selectedMembership && session ? (
@@ -420,7 +426,9 @@ export default function App() {
         <section className="workspace-section"><p className="eyebrow">YOUR WORKSPACE</p><h2>{isPlatformAdmin ? 'Platform overview' : 'School operations'}</h2><div className="workspace-grid">
           {isPlatformAdmin && <WorkspaceCard icon={<ShieldCheck />} title="School management" description="Create and manage school workspaces and administrators." actionLabel="Manage schools" onAction={() => { setError(''); setShowSchoolManagement(true); }} />}
           {isSchoolAdmin && <WorkspaceCard icon={<ShieldCheck />} title="Advanced student records" description="Manage private student profiles, emergency contacts, medical alerts and confidential incident follow-up." actionLabel="Open private records" onAction={() => setActiveWorkspace('students-advanced')} />}
-          {(isPlatformAdmin || isSchoolAdmin || (isUnifiedStaff && (hasStaffPermission('students.create') || hasStaffPermission('students.update') || hasStaffPermission('registers.manage')))) && <WorkspaceCard icon={<Users />} title={isUnifiedStaff ? 'Student registers' : 'Students'} description={isUnifiedStaff ? 'View the student records and class registers assigned to you.' : 'Manage student records and school registers.'} actionLabel="Manage students" onAction={isSchoolAdmin ? () => setActiveWorkspace('students') : undefined} />}
+          {(isPlatformAdmin || isSchoolAdmin) && <WorkspaceCard icon={<Users />} title="Students" description="Manage the school-wide student register and issue student QR tags." actionLabel="Manage students" onAction={() => setActiveWorkspace('students')} />}
+          {isSchoolAdmin && <WorkspaceCard icon={<BookOpen />} title="Classes & class teachers" description="Create class registers, assign class teachers and view each class roster." actionLabel="Manage classes" onAction={() => setActiveWorkspace('classes')} />}
+          {isUnifiedStaff && <WorkspaceCard icon={<BookOpen />} title="My classes" description="Open your assigned class registers and add new students to your classes." actionLabel="Open my classes" onAction={() => setActiveWorkspace('teacher')} />}
           {isSchoolAdmin && <WorkspaceCard icon={<Users />} title="Staff management" description="Create teacher and gate staff accounts, manage access and review staff permissions." actionLabel="Manage staff" onAction={() => setActiveWorkspace('staff')} />}
           {isSchoolAdmin && <WorkspaceCard icon={<HeartHandshake />} title="Parents and guardians" description="Create parent logins and securely link each family to its student records." actionLabel="Manage families" onAction={() => setActiveWorkspace('families')} />}
 
