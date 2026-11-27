@@ -367,12 +367,7 @@ export default function App() {
 
 function Brand() {
   return <a className="brand" href="#top" aria-label="TagIn home">
-    <span className="brand-mark" aria-hidden="true">
-      <svg viewBox="0 0 40 40" width="23" height="23" fill="none" xmlns="http://www.w3.org/2000/svg">
-        <path d="M13 5.5H8.5A3.5 3.5 0 0 0 5 9v4.5M27 5.5h4.5A3.5 3.5 0 0 1 35 9v4.5M35 27v4a3.5 3.5 0 0 1-3.5 3.5H27M13 34.5H8.5A3.5 3.5 0 0 1 5 31v-4" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"/>
-        <path d="M12 13.5h7v7h-7zM24 13.5h4v4M12 25h4v4M23 24l3.2 3.2L33 20" stroke="currentColor" strokeWidth="2.3" strokeLinecap="round" strokeLinejoin="round"/>
-      </svg>
-    </span>
+    <img className="brand-logo" src="/tagin-logo.svg" alt="" />
     <span>TagIn</span>
   </a>;
 }
