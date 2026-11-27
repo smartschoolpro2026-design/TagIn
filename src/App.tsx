@@ -17,6 +17,7 @@ import { PublicLandingPage } from './components/PublicLandingPage';
 import { ParentDashboard } from './components/ParentDashboard';
 import { ActivityAuditWorkspace } from './components/ActivityAuditWorkspace';
 
+type Workspace = 'students' | 'attendance' | 'staff' | 'families' | 'family' | 'transport-admin' | 'transport-driver' | 'timetable-admin' | 'timetable-teacher' | 'timetable-parent' | 'scores-admin' | 'scores-teacher' | 'scores-parent' | 'students-advanced' | 'attendance-scan' | 'activity-audit' | '';
 type Profile = {
   full_name: string;
   platform_role: 'user' | 'super_admin';
@@ -49,7 +50,7 @@ export default function App() {
   const [showSignIn, setShowSignIn] = useState(false);
   const [error, setError] = useState('');
   const [showSchoolManagement, setShowSchoolManagement] = useState(() => sessionStorage.getItem('tagin:last-view') === 'school-management');
-  const [activeWorkspace, setActiveWorkspace] = useState<'students' | 'attendance' | 'staff' | 'families' | 'family' | 'transport-admin' | 'transport-driver' | 'timetable-admin' | 'timetable-teacher' | 'timetable-parent' | 'scores-admin' | 'scores-teacher' | 'scores-parent' | 'students-advanced' | 'attendance-scan' | 'activity-audit' | ''>(() => { const saved=sessionStorage.getItem('tagin:last-view') ?? ''; const allowed=['students','attendance','staff','families','family','transport-admin','transport-driver','timetable-admin','timetable-teacher','timetable-parent','scores-admin','scores-teacher','scores-parent','students-advanced','attendance-scan','activity-audit']; return allowed.includes(saved)?saved as typeof activeWorkspace:''; });
+  const [activeWorkspace, setActiveWorkspace] = useState<Workspace>(() => { const saved=sessionStorage.getItem('tagin:last-view') ?? ''; const allowed: Workspace[]=['students','attendance','staff','families','family','transport-admin','transport-driver','timetable-admin','timetable-teacher','timetable-parent','scores-admin','scores-teacher','scores-parent','students-advanced','attendance-scan','activity-audit']; return allowed.includes(saved as Workspace)?saved as Workspace:''; });() => { const saved=sessionStorage.getItem('tagin:last-view') ?? ''; const allowed=['students','attendance','staff','families','family','transport-admin','transport-driver','timetable-admin','timetable-teacher','timetable-parent','scores-admin','scores-teacher','scores-parent','students-advanced','attendance-scan','activity-audit']; return allowed.includes(saved)?saved as typeof activeWorkspace:''; });
   const [schools, setSchools] = useState<School[]>([]);
   const [schoolNameInput, setSchoolNameInput] = useState('');
   const [schoolSlugInput, setSchoolSlugInput] = useState('');
