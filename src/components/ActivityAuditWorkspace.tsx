@@ -105,7 +105,7 @@ export function ActivityAuditWorkspace({ client, session, schoolId, schoolName, 
     const headers = ['Date and time (UTC)','School','Actor','Actor user ID','Action','Entity type','Entity reference','Details'];
     const lines = filtered.map(row => [
       row.created_at, row.school_id ? schools[row.school_id] ?? row.school_id : 'Platform',
-      row.actor_user_id ? actors[row.actor_user_id] ?? 'Account name unavailable' : 'System / automated action',
+      row.actor_user_id ? actors[row.actor_user_id] ?? 'Account name unavailable' : (typeof row.metadata?.attempted_name === 'string' ? 'Failed sign-in attempt for ' + row.metadata.attempted_name : 'System / automated action'),
       row.actor_user_id ?? '', row.action, row.entity_type, row.entity_id ?? '', row.metadata ?? {},
     ].map(csvCell).join(','));
     const csv = '\uFEFF' + [headers.map(csvCell).join(','), ...lines].join('\r\n');
