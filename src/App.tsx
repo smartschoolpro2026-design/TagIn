@@ -49,6 +49,7 @@ export default function App() {
   const [busy, setBusy] = useState(false);
   const [loading, setLoading] = useState(true);
   const [showSignIn, setShowSignIn] = useState(false);
+  const [isQrEntry, setIsQrEntry] = useState(() => window.location.pathname === '/scan');
   const [roleMode, setRoleMode] = useState<'choose'|'staff'|'parent'|''>('');
   const [error, setError] = useState('');
   const [showSchoolManagement, setShowSchoolManagement] = useState(() => sessionStorage.getItem('tagin:last-view') === 'school-management');
@@ -79,6 +80,10 @@ export default function App() {
       if (!nextSession) { setProfile(null); setMemberships([]); setGuardianSchoolIds([]); setSchoolId(''); setRoleMode(''); setShowSignIn(false); }
     });
     return () => { alive = false; subscription.unsubscribe(); };
+  }, []);
+
+  useEffect(() => {
+    if (window.location.pathname === '/scan') window.history.replaceState({}, '', '/scan');
   }, []);
 
   useEffect(() => {
@@ -342,6 +347,7 @@ export default function App() {
   if (!isSupabaseConfigured || !client) {
     return <main className="auth-shell"><Brand /><section className="auth-card setup-card"><div className="auth-icon"><ShieldCheck size={25} /></div><p className="eyebrow">INITIAL SETUP</p><h1>Connect TagIn to your school workspace.</h1><p className="muted">The application is ready. Add the Supabase project URL and public publishable key to your local environment to enable secure sign-in.</p><div className="code-note">Copy <strong>.env.example</strong> to <strong>.env.local</strong>, then fill in the two Vite environment variables.</div></section></main>;
   }
+  if (isQrEntry) return <main className="auth-shell"><Brand /><section className="auth-card"><div className="auth-icon"><QrCode size={25} /></div><p className="eyebrow">TAGIN · SECURE STUDENT PASS</p><h1>Please log in to your TagIn dashboard.</h1><p className="muted">This student QR pass does not display personal or attendance information. Sign in with an authorised school or family account to continue in TagIn.</p><button className="primary-button" type="button" onClick={() => { setIsQrEntry(false); setShowSignIn(true); }}>Go to TagIn sign in <ArrowRight size={17}/></button><p className="security-note"><ShieldCheck size={14}/> Scanning a code does not grant access or record attendance.</p></section></main>;
   if (loading) return <main className="auth-shell"><Brand /><div className="loading-card">Loading your secure school workspace…</div></main>;
 
   if (!session && !showSignIn) return <PublicLandingPage onSignIn={() => setShowSignIn(true)} />;
