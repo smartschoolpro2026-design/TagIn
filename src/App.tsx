@@ -287,7 +287,7 @@ export default function App() {
       <ScoresWorkspace client={client!} schoolId={selectedMembership.school_id} schoolName={schoolName} mode="teacher" membershipId={selectedMembership.id} userId={session?.user.id} onBack={() => setActiveWorkspace('')} />
     ) : activeWorkspace === 'scores-parent' && isParent && session && (selectedMembership?.school_id || guardianSchoolIds[0]) ? (
       <ScoresWorkspace client={client!} schoolId={selectedMembership?.school_id ?? guardianSchoolIds[0]} schoolName={selectedMembership?.schools?.name ?? 'Your school'} mode="parent" userId={session.user.id} onBack={() => setActiveWorkspace('')} />
-    ) :     {activeWorkspace === 'timetable-admin' && isSchoolAdmin && selectedMembership ? (
+    ) : activeWorkspace === 'timetable-admin' && isSchoolAdmin && selectedMembership ? (
       <TimetableWorkspace client={client!} schoolId={selectedMembership.school_id} schoolName={schoolName} mode="admin" userId={session?.user.id} onBack={() => setActiveWorkspace('')} />
     ) : activeWorkspace === 'timetable-teacher' && selectedMembership?.role === 'staff' ? (
       <TimetableWorkspace client={client!} schoolId={selectedMembership.school_id} schoolName={schoolName} mode="teacher" membershipId={selectedMembership.id} userId={session?.user.id} onBack={() => setActiveWorkspace('')} />
