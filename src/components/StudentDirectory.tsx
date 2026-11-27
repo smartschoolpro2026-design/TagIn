@@ -6,11 +6,14 @@ import { StudentQrCard } from './StudentQrCard';
 type Student = {
   id: string;
   full_name: string;
+  class_id: string | null;
   class_name: string | null;
   level: string | null;
   active: boolean;
   created_at: string;
 };
+
+type SchoolClass = { id: string; class_name: string; level: string };
 
 type Props = {
   client: SupabaseClient;
@@ -21,6 +24,7 @@ type Props = {
 
 export function StudentDirectory({ client, schoolId, schoolName, onBack }: Props) {
   const [students, setStudents] = useState<Student[]>([]);
+  const [classes, setClasses] = useState<SchoolClass[]>([]);
   const [loading, setLoading] = useState(true);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
@@ -28,8 +32,7 @@ export function StudentDirectory({ client, schoolId, schoolName, onBack }: Props
   const [search, setSearch] = useState('');
   const [showForm, setShowForm] = useState(false);
   const [fullName, setFullName] = useState('');
-  const [className, setClassName] = useState('');
-  const [level, setLevel] = useState('');
+  const [classId, setClassId] = useState('');
   const [qrStudent, setQrStudent] = useState<Student | null>(null);
   const [qrToken, setQrToken] = useState('');
 
@@ -38,14 +41,13 @@ export function StudentDirectory({ client, schoolId, schoolName, onBack }: Props
     async function loadStudents() {
       setLoading(true);
       setError('');
-      const { data, error: queryError } = await client
-        .from('students')
-        .select('id,full_name,class_name,level,active,created_at')
-        .eq('school_id', schoolId)
-        .order('full_name', { ascending: true });
+      const [studentResult, classResult] = await Promise.all([
+        client.from('students').select('id,full_name,class_id,class_name,level,active,created_at').eq('school_id', schoolId).order('full_name', { ascending: true }),
+        client.from('school_classes').select('id,class_name,level').eq('school_id', schoolId).order('class_name')
+      ]);
       if (!alive) return;
-      if (queryError) setError('We could not load this school’s student register. Please try again.');
-      else setStudents((data ?? []) as Student[]);
+      if (studentResult.error || classResult.error) setError('We could not load this school’s student register. Please try again.');
+      else { setStudents((studentResult.data ?? []) as Student[]); setClasses((classResult.data ?? []) as SchoolClass[]); }
       setLoading(false);
     }
     void loadStudents();
@@ -74,13 +76,8 @@ export function StudentDirectory({ client, schoolId, schoolName, onBack }: Props
     setNotice('');
     const { data, error: insertError } = await client
       .from('students')
-      .insert({
-        school_id: schoolId,
-        full_name: name,
-        class_name: className.trim() || null,
-        level: level.trim() || null,
-      })
-      .select('id,full_name,class_name,level,active,created_at')
+      .insert({ school_id: schoolId, full_name: name, class_id: classId || null })
+      .select('id,full_name,class_id,class_name,level,active,created_at')
       .single();
     if (insertError) {
       setError(insertError.message.includes('row-level security')
@@ -89,8 +86,7 @@ export function StudentDirectory({ client, schoolId, schoolName, onBack }: Props
     } else if (data) {
       setStudents((current) => [...current, data as Student].sort((a, b) => a.full_name.localeCompare(b.full_name)));
       setFullName('');
-      setClassName('');
-      setLevel('');
+      setClassId('');
       setShowForm(false);
       setNotice('Student added to the school register.');
     }
@@ -106,7 +102,7 @@ export function StudentDirectory({ client, schoolId, schoolName, onBack }: Props
       .update({ active: !student.active })
       .eq('id', student.id)
       .eq('school_id', schoolId)
-      .select('id,full_name,class_name,level,active,created_at')
+      .select('id,full_name,class_id,class_name,level,active,created_at')
       .single();
     if (updateError) setError('We could not update this student’s status. Please try again.');
     else if (data) {
@@ -160,7 +156,7 @@ export function StudentDirectory({ client, schoolId, schoolName, onBack }: Props
       <div className="student-summary">
         <div><span className="student-summary-icon"><Users size={19} /></span><strong>{students.length}</strong><span>Total students</span></div>
         <div><span className="student-summary-icon"><UserRound size={19} /></span><strong>{activeCount}</strong><span>Active students</span></div>
-        <div><span className="student-summary-icon"><BookOpen size={19} /></span><strong>{new Set(students.map((student) => student.class_name).filter(Boolean)).size}</strong><span>Classes represented</span></div>
+        <div><span className="student-summary-icon"><BookOpen size={19} /></span><strong>{classes.length}</strong><span>Classes represented</span></div>
       </div>
 
       {showForm && (
@@ -168,10 +164,7 @@ export function StudentDirectory({ client, schoolId, schoolName, onBack }: Props
           <div className="student-form-heading"><div><h2>Add a student</h2><p>Enter the student’s basic school details.</p></div></div>
           <label htmlFor="student-full-name">Student full name</label>
           <input id="student-full-name" value={fullName} onChange={(event) => setFullName(event.target.value)} placeholder="Enter full name" minLength={2} maxLength={160} required />
-          <div className="student-form-grid">
-            <div><label htmlFor="student-class">Class</label><input id="student-class" value={className} onChange={(event) => setClassName(event.target.value)} placeholder="e.g. Primary 4" maxLength={80} /></div>
-            <div><label htmlFor="student-level">Level / section</label><input id="student-level" value={level} onChange={(event) => setLevel(event.target.value)} placeholder="e.g. Blue" maxLength={80} /></div>
-          </div>
+          <div className="student-form-grid"><div><label htmlFor="student-class">Assign to class</label><select id="student-class" value={classId} onChange={event => setClassId(event.target.value)}><option value="">No class assigned yet</option>{classes.map(item => <option key={item.id} value={item.id}>{item.class_name}{item.level ? ' · ' + item.level : ''}</option>)}</select></div></div>
           <div className="student-form-actions"><button className="secondary-button" type="button" onClick={() => setShowForm(false)}>Cancel</button><button className="primary-button" type="submit" disabled={busy}>{busy ? 'Saving student…' : 'Save student'}</button></div>
         </form>
       )}
