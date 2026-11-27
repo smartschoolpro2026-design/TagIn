@@ -18,3 +18,22 @@
 
 .school-admin-name{margin:2px 0 3px;color:#294b3d;font-size:18px;font-weight:700}
 .school-admin-role{margin:0;color:#718078;font-size:14px;font-weight:600}
+
+
+/* Compact school-admin dashboard on phones without hiding any modules */
+@media(max-width:700px){
+  .workspace-topbar{height:64px}
+  .school-admin-welcome{padding:20px 18px;margin-top:16px;gap:10px}
+  .school-identity-copy .eyebrow{margin-bottom:8px}
+  .school-identity-copy h1{font-size:clamp(25px,7.2vw,32px);margin-bottom:9px}
+  .school-admin-name{font-size:16px}
+  .school-admin-role{font-size:13px}
+  .workspace-section{padding:28px 0 36px}
+  .workspace-section h2{font-size:25px;margin-bottom:16px}
+  .workspace-grid{gap:12px}
+  .workspace-card{min-height:0;padding:16px}
+  .workspace-card-icon{width:36px;height:36px}
+  .workspace-card h3{margin:12px 0 5px;font-size:15px}
+  .workspace-card p{font-size:13.5px;line-height:1.5}
+  .coming-soon{margin-top:10px}
+}
