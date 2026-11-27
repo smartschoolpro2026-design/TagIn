@@ -67,7 +67,7 @@ Deno.serve(async (req: Request) => {
       success: true,
       token: student.token,
       student: {
-        id: student.id,
+        id: student.student_id,
         fullName: student.full_name,
         className: student.class_name,
       },
