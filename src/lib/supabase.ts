@@ -2,10 +2,10 @@ import { createClient } from '@supabase/supabase-js';
 
 // These are public browser configuration values, not server secrets.
 // Vite environment variables override the committed fallback when provided.
-const supabaseUrl =
+export const supabaseUrl =
   import.meta.env.VITE_SUPABASE_URL ||
   'https://wlkqsivehfwogdquodxx.supabase.co';
-const supabaseAnonKey =
+export const supabaseAnonKey =
   import.meta.env.VITE_SUPABASE_ANON_KEY ||
   'sb_publishable_yVimCHXGHJdSinXgiVbHjw_ZmsXpQ6T';
 
