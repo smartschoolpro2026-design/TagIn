@@ -60,11 +60,13 @@ export default function App() {
   useEffect(() => {
     if (!client) { setLoading(false); return; }
     let alive = true;
-    client.auth.getSession().then(({ data }) => {
-      if (alive) { setSession(data.session); setLoading(false); }
-    });
+    // INITIAL_SESSION is emitted by Supabase Auth after it has loaded local
+    // storage. Use this single initialization path instead of racing
+    // getSession() against the auth-state subscription.
     const { data: { subscription } } = client.auth.onAuthStateChange((_event, nextSession) => {
+      if (!alive) return;
       setSession(nextSession);
+      setLoading(false);
       if (!nextSession) { setProfile(null); setMemberships([]); setGuardianSchoolIds([]); setSchoolId(''); setShowSignIn(false); }
     });
     return () => { alive = false; subscription.unsubscribe(); };
