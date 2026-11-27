@@ -15,3 +15,6 @@
 .school-identity-mark{width:100px;height:100px;flex:0 0 100px;display:flex;flex-direction:column;justify-content:center;gap:5px;border:1px solid #d5e5d6;background:#dcebdd;color:#326447}
 .school-identity-mark span{font-size:8px;font-weight:800;letter-spacing:.7px;text-align:center}
 @media(max-width:700px){.school-admin-welcome{align-items:flex-start;padding:25px 20px;margin-top:20px;gap:12px}.school-identity-copy h1{font-size:clamp(27px,8vw,36px)}.school-identity-mark{width:58px;height:58px;flex-basis:58px;border-radius:16px}.school-identity-mark svg{width:29px;height:29px}.school-identity-mark span{display:none}.school-workspace-code{font-size:9px;letter-spacing:.7px}}
+
+.school-admin-name{margin:2px 0 3px;color:#294b3d;font-size:18px;font-weight:700}
+.school-admin-role{margin:0;color:#718078;font-size:14px;font-weight:600}
