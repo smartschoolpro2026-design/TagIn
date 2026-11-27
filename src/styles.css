@@ -201,3 +201,45 @@
 .workspace-topbar .qr-header-button:hover{background:#dceee2;border-color:#b8d8c4}
 .workspace-topbar .account-actions{gap:12px}
 @media(max-width:700px){.workspace-topbar .qr-header-button{width:46px;height:46px;min-width:46px;border-radius:14px}}
+
+
+/* Dedicated parent portal */
+.parent-dashboard{padding:25px 0 48px;max-width:900px;margin:0 auto}
+.parent-welcome{display:flex;align-items:center;justify-content:space-between;padding:34px 0 25px}
+.parent-welcome h1{margin:0 0 8px;color:#17372f;font:800 clamp(32px,5vw,43px)/1.15 Manrope,sans-serif;letter-spacing:-1px}
+.parent-welcome p:last-child{margin:0;color:#718078;font-size:14px}
+.parent-welcome-mark{width:62px;height:62px;display:grid;place-items:center;border-radius:19px;background:#e3eee4;color:#477a5b}
+.parent-school-strip{display:flex;align-items:center;gap:13px;padding:15px 17px;border:1px solid #e2e9e1;border-radius:12px;background:#fff}
+.parent-school-strip>span{width:39px;height:39px;display:grid;place-items:center;border-radius:11px;background:#eaf2eb;color:#397253}
+.parent-school-strip>div{display:grid;gap:4px}
+.parent-school-strip small{color:#8a9a8e;font-size:10px;font-weight:800;letter-spacing:1px}
+.parent-school-strip strong{color:#294b3d;font-size:14px}
+.parent-child-panel{margin-top:14px;padding:21px;border:1px solid #e2e9e1;border-radius:14px;background:#fff}
+.parent-child-heading{display:flex;align-items:center;justify-content:space-between;gap:15px}
+.parent-child-heading .eyebrow{margin-bottom:7px}
+.parent-child-heading h2{margin:0;color:#1a3930;font:800 25px Manrope,sans-serif}
+.parent-child-heading p:last-child{margin:5px 0 0;color:#7b8980;font-size:13px}
+.parent-child-select{position:relative;display:grid;gap:5px;color:#849188;font-size:11px}
+.parent-child-select select{max-width:170px;padding:9px 28px 9px 10px;appearance:none;border:1px solid #dfe7df;border-radius:8px;background:#fbfcfa;color:#294b3d;font-weight:700}
+.parent-child-select>svg{position:absolute;right:9px;bottom:10px;pointer-events:none}
+.parent-qr-panel{display:flex;align-items:center;gap:17px;margin-top:20px;padding:18px;border:1px dashed #cbdccb;border-radius:12px;background:#f7faf6}
+.parent-qr-placeholder{width:76px;height:76px;flex:0 0 76px;display:grid;place-items:center;border-radius:10px;background:#e5efe5;color:#477a5b}
+.parent-qr-panel strong{color:#294b3d;font:700 16px Manrope,sans-serif}
+.parent-qr-panel p{margin:6px 0;color:#718078;font-size:13px;line-height:1.55}
+.parent-qr-panel span{color:#8a8060;font-size:11px;line-height:1.5}
+.parent-menu-section{padding:31px 0 20px}
+.parent-menu-section h2{margin:0 0 15px;color:#1a3930;font:800 25px Manrope,sans-serif}
+.parent-menu-grid{display:grid;grid-template-columns:1fr 1fr;gap:11px}
+.parent-menu-item{min-width:0;display:flex;align-items:center;gap:12px;padding:16px 14px;border:1px solid #e2e9e1;border-radius:12px;background:#fff;text-align:left;cursor:pointer}
+.parent-menu-icon{width:39px;height:39px;flex:0 0 39px;display:grid;place-items:center;border-radius:11px;background:#eaf2eb;color:#397253}
+.parent-menu-copy{min-width:0;flex:1;display:grid;gap:5px}
+.parent-menu-copy strong{color:#294b3d;font-size:13px}
+.parent-menu-copy small{color:#829087;font-size:11px;line-height:1.45}
+.parent-menu-arrow{color:#72917b;font-size:23px}
+.parent-menu-item:active{background:#f4f8f2}
+.parent-dashboard-foot{margin:10px 0;color:#94a097;font-size:11px}
+.parent-empty,.parent-loading{padding:30px;text-align:center}
+.parent-empty{display:flex;flex-direction:column;align-items:center;gap:9px;color:#548065}
+.parent-empty strong{color:#294b3d}
+.parent-empty p{max-width:350px;margin:0;color:#7b8980;font-size:13px;line-height:1.6}
+@media(max-width:700px){.parent-dashboard{padding:15px 0 35px}.parent-welcome{padding:27px 0 21px}.parent-welcome-mark{width:52px;height:52px}.parent-child-panel{padding:16px}.parent-child-heading h2{font-size:21px}.parent-qr-panel{align-items:flex-start;padding:13px;gap:12px}.parent-qr-placeholder{width:58px;height:58px;flex-basis:58px}.parent-qr-placeholder svg{width:27px}.parent-qr-panel p{font-size:12px}.parent-menu-grid{grid-template-columns:1fr}.parent-menu-item{padding:14px}}
