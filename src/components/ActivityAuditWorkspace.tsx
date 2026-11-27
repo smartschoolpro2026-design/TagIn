@@ -42,7 +42,7 @@ function activityTitle(row:AuditRow) {
   'students.insert':'Student created','students.update':'Student updated','students.delete':'Student deleted',
   'guardians.insert':'Parent account created','guardians.update':'Parent details updated','guardians.delete':'Parent record deleted',
   'student_guardians.insert':'Parent linked to student','student_guardians.delete':'Parent unlinked from student',
-  'parent.linked':'Parent account created and linked','profiles.insert':'Login created','profiles.update':'Login details updated',
+  'parent.linked':'Parent account created','school_admin.created':'Login created','profiles.insert':'Login created','profiles.update':'Login details updated',
   'school_memberships.insert':'Login access created','school_memberships.update':'Login access updated','school_memberships.delete':'Login access removed',
   'scan_events.insert':'Student checked in/out','tags.insert':'QR tag issued','tags.update':'QR tag updated',
   'activity.exported':'Activity report exported','activity.export_failed':'Activity report export failed',
@@ -58,7 +58,7 @@ function personFor(row:AuditRow, students:Record<string,{name:string;className:s
  const m=row.metadata??{};
  const after=(m.after&&typeof m.after==='object'?m.after:{}) as Record<string,unknown>;
  const before=(m.before&&typeof m.before==='object'?m.before:{}) as Record<string,unknown>;
- for(const value of [m.parent_name,m.student_name,after.full_name,before.full_name,after.name,before.name,m.attempted_name]) if(typeof value==='string'&&value.trim()) return value;
+ for(const value of [m.parent_name,m.student_name,m.administrator_name,after.full_name,before.full_name,after.name,before.name,m.attempted_name]) if(typeof value==='string'&&value.trim()) return value;
  return friendlyEntity(row.entity_type);
 }
 function changedSummary(row:AuditRow) {
