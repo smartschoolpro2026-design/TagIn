@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState, type FormEvent } from 'react';
 import type { SupabaseClient } from '@supabase/supabase-js';
 import { ArrowLeft, BookOpen, Plus, QrCode, Search, UserRound, Users, X } from 'lucide-react';
 import { StudentQrCard } from './StudentQrCard';
+import { BulkStudentQrCards, type BulkQrStudent } from './BulkStudentQrCards';
 
 type Student = {
   id: string;
@@ -35,6 +36,8 @@ export function StudentDirectory({ client, schoolId, schoolName, onBack }: Props
   const [classId, setClassId] = useState('');
   const [qrStudent, setQrStudent] = useState<Student | null>(null);
   const [qrToken, setQrToken] = useState('');
+  const [bulkClassId, setBulkClassId] = useState('');
+  const [bulkQrStudents, setBulkQrStudents] = useState<BulkQrStudent[]>([]);
 
   useEffect(() => {
     let alive = true;
@@ -112,6 +115,43 @@ export function StudentDirectory({ client, schoolId, schoolName, onBack }: Props
     setBusy(false);
   }
 
+  async function issueClassQrPasses() {
+    if (!bulkClassId || busy) return;
+    const selectedClass = classes.find(item => item.id === bulkClassId);
+    if (!selectedClass) return;
+    const roster = students.filter(item => item.active && item.class_id === bulkClassId);
+    if (!roster.length) { setError('There are no active students in this class to generate QR passes for.'); return; }
+    setBusy(true); setError(''); setNotice(''); setBulkQrStudents([]);
+    try {
+      const issued = await Promise.all(roster.map(async student => {
+        const bytes = crypto.getRandomValues(new Uint8Array(32));
+        const token = btoa(String.fromCharCode(...bytes)).replace(/\\+/g, '-').replace(/\\//g, '_').replace(/=+$/g, '');
+        const digest = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(token));
+        const tokenHash = Array.from(new Uint8Array(digest)).map(b => b.toString(16).padStart(2, '0')).join('');
+        return { student, token, tokenHash };
+      }));
+      const studentIds = issued.map(item => item.student.id);
+      const { data: previousTags, error: previousError } = await client.from('tags').select('id,student_id').eq('school_id', schoolId).in('student_id', studentIds).eq('status', 'active');
+      if (previousError) throw new Error('Existing student QR passes could not be checked. No codes were changed.');
+      const { data: newTags, error: insertError } = await client.from('tags')
+        .insert(issued.map(item => ({ school_id: schoolId, student_id: item.student.id, token_hash: item.tokenHash, tag_type: 'bag', status: 'active' })))
+        .select('id,student_id');
+      if (insertError || !newTags || newTags.length !== issued.length) throw new Error('The class QR passes could not all be issued. No previous codes were revoked.');
+      const previousIds = (previousTags ?? []).map(item => item.id);
+      if (previousIds.length) {
+        const { error: revokeError } = await client.from('tags').update({ status: 'revoked', revoked_at: new Date().toISOString() }).in('id', previousIds);
+        if (revokeError) {
+          await client.from('tags').update({ status: 'revoked', revoked_at: new Date().toISOString() }).in('id', newTags.map(item => item.id));
+          throw new Error('Previous codes could not be safely replaced. The newly generated codes have been revoked; try again.');
+        }
+      }
+      setBulkQrStudents(issued.map(item => ({ id: item.student.id, full_name: item.student.full_name, class_name: item.student.class_name ?? selectedClass.class_name, level: item.student.level ?? selectedClass.level, token: item.token })));
+      setNotice('QR passes generated for ' + issued.length + ' active students. Previous active codes have been revoked.');
+    } catch (e) {
+      setError(e instanceof Error ? e.message : 'Class QR passes could not be generated.');
+    } finally { setBusy(false); }
+  }
+
   async function issueStudentQr(student: Student) {
     if (!student.active || busy) return;
     setBusy(true); setError(''); setNotice(''); setQrStudent(null); setQrToken('');
@@ -153,6 +193,8 @@ export function StudentDirectory({ client, schoolId, schoolName, onBack }: Props
         </button>
       </div>
 
+      <section className="student-bulk-qr-panel"><div><p className="eyebrow">CLASS QR GENERATOR</p><h2>Generate QR passes for a whole class</h2><p className="muted">Creates one unique bag-tag QR code for every active student in the selected class.</p></div><div className="student-bulk-qr-controls"><select aria-label="Select class for QR generation" value={bulkClassId} onChange={event => setBulkClassId(event.target.value)}><option value="">Select a class</option>{classes.map(item => <option key={item.id} value={item.id}>{item.class_name}{item.level ? ' · ' + item.level : ''}</option>)}</select><button className="primary-button" type="button" disabled={busy || !bulkClassId || !students.some(item => item.active && item.class_id === bulkClassId)} onClick={() => void issueClassQrPasses()}><QrCode size={16}/>{busy ? 'Generating…' : 'Generate class QR passes'}</button></div></section>
+
       <div className="student-summary">
         <div><span className="student-summary-icon"><Users size={19} /></span><strong>{students.length}</strong><span>Total students</span></div>
         <div><span className="student-summary-icon"><UserRound size={19} /></span><strong>{activeCount}</strong><span>Active students</span></div>
@@ -184,6 +226,7 @@ export function StudentDirectory({ client, schoolId, schoolName, onBack }: Props
         )}
       </div>
       <p className="student-footnote">Student records are retained when marked inactive. Attendance history is not deleted.</p>
+      {bulkQrStudents.length>0&&<BulkStudentQrCards schoolName={schoolName} classLabel={classes.find(item=>item.id===bulkClassId)?.class_name ?? 'Class'} students={bulkQrStudents} onClose={()=>setBulkQrStudents([])}/>}
       {qrStudent&&qrToken&&<StudentQrCard studentName={qrStudent.full_name} className={qrStudent.class_name} token={qrToken} onClose={()=>{setQrStudent(null);setQrToken('');}}/>}
     </section>
   );
