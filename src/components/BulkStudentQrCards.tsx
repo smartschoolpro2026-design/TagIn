@@ -19,7 +19,7 @@ export function BulkStudentQrCards({ schoolName, classLabel, students, onClose }
       element.innerHTML = '';
       const token = element.dataset.qrToken;
       if (!token || !window.QRCode) { setError('The QR generator is unavailable. Refresh and try again.'); return; }
-      try { new window.QRCode(element, { text: 'TAGIN:' + token, width: 172, height: 172, colorDark: '#123f30', colorLight: '#ffffff', correctLevel: window.QRCode.CorrectLevel?.M ?? 0 }); }
+      try { new window.QRCode(element, { text: 'https://tagin.smartschoolpro2026.workers.dev/scan?code=' + encodeURIComponent('TAGIN:' + token), width: 172, height: 172, colorDark: '#123f30', colorLight: '#ffffff', correctLevel: window.QRCode.CorrectLevel?.M ?? 0 }); }
       catch { setError('One or more QR codes could not be rendered. Please refresh and try again.'); }
     });
   }, [students]);
