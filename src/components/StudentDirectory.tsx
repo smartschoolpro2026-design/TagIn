@@ -71,9 +71,9 @@ export function StudentDirectory({ client, schoolId, schoolName, userId, onBack,
       const assignedTeacher = teacherName(assignedClass?.teacher_membership_id ?? null).toLowerCase();
       return [student.full_name, student.class_name ?? '', student.level ?? '', assignedTeacher].some(value => value.toLowerCase().includes(term));
     });
-  }, [students, classes, search, teachers]);
+  }, [classStudents, classes, search, teachers]);
 
-  const activeCount = students.filter(student => student.active).length;
+  const activeCount = classStudents.filter(student => student.active).length;\n  const inactiveCount = classStudents.length - activeCount;
   function teacherName(membershipId: string | null) {
     const teacher = teachers.find(item => item.id === membershipId);
     const profile = Array.isArray(teacher?.profiles) ? teacher?.profiles[0] : teacher?.profiles;
