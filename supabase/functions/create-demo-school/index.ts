@@ -295,7 +295,7 @@ Deno.serve(async (req: Request) => {
     });
 
     const credentials = specs.map(spec => ({
-      role: spec.role === "school_admin" ? "School Admin" : spec.role === "staff" ? (spec.key === "teacher" ? "Teacher" : "General Staff") : spec.role === "gate_staff" ? "Gate Staff" : spec.role === "bus_staff" ? (spec.key === "driver" ? "Bus Driver" : "Bus Assistant") : "Parent / Guardian",
+      role: spec.role === "school_admin" ? "School Admin" : spec.role === "staff" ? (spec.key.startsWith("teacher") ? "Teacher" : "General Staff") : spec.role === "gate_staff" ? "Gate Staff" : spec.role === "bus_staff" ? (spec.key === "driver" ? "Bus Driver" : "Bus Assistant") : "Parent / Guardian",
       fullName: people[spec.key].name,
       phone: people[spec.key].phone,
       password: people[spec.key].password,
