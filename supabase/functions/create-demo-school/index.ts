@@ -8,8 +8,10 @@ const DEMO_SLUG = "tagin-demo-academy";
 const phoneList = {
   admin: "08000000001", gate: "08000000003", office: "08000000004",
   driver: "08000000005", assistant: "08000000006",
-  ...Object.fromEntries(Array.from({ length: 10 }, (_, i) => ["teacher" + (i + 1), "08000000" + String(20 + i).padStart(3, "0")])),
-  ...Object.fromEntries(Array.from({ length: 20 }, (_, i) => ["parent" + (i + 1), "08000000" + String(40 + i).padStart(3, "0")])),
+  teacher1: "08000000002",
+  ...Object.fromEntries(Array.from({ length: 9 }, (_, i) => ["teacher" + (i + 2), "08000000" + String(20 + i).padStart(3, "0")])),
+  parent1: "08000000007", parent2: "08000000008",
+  ...Object.fromEntries(Array.from({ length: 18 }, (_, i) => ["parent" + (i + 3), "08000000" + String(40 + i).padStart(3, "0")])),
 };
 function randomPassword() {
   const alphabet = "ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz23456789!@#$%";
@@ -213,6 +215,8 @@ Deno.serve(async (req: Request) => {
       if (qrError) throw new Error("Could not create the secure QR credential for " + spec.name + ": " + qrError.message);
       const guardian = people[spec.parent];
       const guardianName = guardian.name;
+      const { error: oldLinksError } = await admin.from("student_guardians").delete().eq("school_id", schoolId).eq("student_id", student.id);
+      if (oldLinksError) throw new Error("Could not refresh the demo parent link for " + spec.name);
       const { data: guardianRow, error: guardianError } = await admin.from("guardians").upsert({
         school_id: schoolId, user_id: guardian.userId, full_name: guardianName,
         relationship: "Parent", phone: guardian.phone,
