@@ -6,9 +6,10 @@ const reply = (status: number, body: Record<string, unknown>) => new Response(JS
 const DEMO_SCHOOL = "TagIn Demo Academy";
 const DEMO_SLUG = "tagin-demo-academy";
 const phoneList = {
-  admin: "08000000001", teacher: "08000000002", gate: "08000000003",
-  office: "08000000004", driver: "08000000005", assistant: "08000000006",
-  parentA: "08000000007", parentB: "08000000008",
+  admin: "08000000001", gate: "08000000003", office: "08000000004",
+  driver: "08000000005", assistant: "08000000006",
+  ...Object.fromEntries(Array.from({ length: 10 }, (_, i) => ["teacher" + (i + 1), "08000000" + String(20 + i).padStart(3, "0")])),
+  ...Object.fromEntries(Array.from({ length: 20 }, (_, i) => ["parent" + (i + 1), "08000000" + String(40 + i).padStart(3, "0")])),
 };
 function randomPassword() {
   const alphabet = "ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz23456789!@#$%";
@@ -95,15 +96,24 @@ Deno.serve(async (req: Request) => {
     }
     const schoolId = school.id;
 
+    const teacherNames = [
+      "Grace Johnson", "Peter Okafor", "Ruth Adeyemi", "David Bello", "Esther James",
+      "Samuel Williams", "Mary Carter", "Daniel Ibrahim", "Joy Campbell", "Michael Adebayo",
+    ];
+    const parentNames = [
+      "Olivia Carter", "Michael James", "Aisha Bello", "David Okafor", "Chinwe Adeyemi",
+      "Tunde Williams", "Grace Campbell", "Emeka Johnson", "Fatima Ibrahim", "Daniel Bennett",
+      "Ada Dawson", "Joseph Edwards", "Nneka Anderson", "Paul Mensah", "Zainab Musa",
+      "Chidi Eze", "Amaka Obi", "Ibrahim Yusuf", "Sarah Peters", "John Nwosu",
+    ];
     const specs = [
       { key: "admin", name: "Alex Morgan", phone: phoneList.admin, role: "school_admin" },
-      { key: "teacher", name: "Grace Johnson", phone: phoneList.teacher, role: "staff", jobTitle: "Teacher", department: "Primary Education" },
+      ...teacherNames.map((name, i) => ({ key: "teacher" + (i + 1), name, phone: phoneList["teacher" + (i + 1) as keyof typeof phoneList], role: "staff", jobTitle: "Class Teacher", department: "Student Attendance" })),
       { key: "gate", name: "Daniel Okafor", phone: phoneList.gate, role: "gate_staff" },
       { key: "office", name: "Esther Williams", phone: phoneList.office, role: "staff", jobTitle: "School Office Staff", department: "Administration" },
       { key: "driver", name: "Samuel Adeyemi", phone: phoneList.driver, role: "bus_staff" },
       { key: "assistant", name: "Mary Bello", phone: phoneList.assistant, role: "bus_staff" },
-      { key: "parentA", name: "Olivia Carter", phone: phoneList.parentA, role: "parent" },
-      { key: "parentB", name: "Michael James", phone: phoneList.parentB, role: "parent" },
+      ...parentNames.map((name, i) => ({ key: "parent" + (i + 1), name, phone: phoneList["parent" + (i + 1) as keyof typeof phoneList], role: "parent" })),
     ];
     const people: Record<string, any> = {};
     for (const spec of specs) people[spec.key] = await account(admin, schoolId, auth.user.id, spec);
@@ -140,7 +150,7 @@ Deno.serve(async (req: Request) => {
     for (const spec of classSpecs) {
       const { data, error } = await admin.from("school_classes").upsert({
         school_id: schoolId, ...spec,
-        teacher_membership_id: people.teacher.membershipId,
+        teacher_membership_id: people["teacher" + ((classSpecs.findIndex(c => c.class_name === spec.class_name) % 10) + 1)].membershipId,
         created_by: auth.user.id,
       }, { onConflict: "school_id,level,class_name" }).select("id,class_name,level").single();
       if (error || !data) throw new Error("Could not create demo class " + spec.class_name);
@@ -171,7 +181,7 @@ Deno.serve(async (req: Request) => {
           name: rosterNames[index],
           admission: "TDA-" + String(index + 1).padStart(3, "0"),
           className: classSpec.class_name,
-          parent: index % 2 === 0 ? "parentA" : "parentB",
+          parent: "parent" + ((index % 20) + 1),
           usesBus: index % 2 === 0,
         };
       }),
@@ -244,42 +254,6 @@ Deno.serve(async (req: Request) => {
       if (error) throw new Error("Could not assign a demo student to the bus route.");
     }
 
-    const assessmentName = "Mathematics Mid-Term Test";
-    let { data: assessment } = await admin.from("assessments").select("id").eq("school_id", schoolId).eq("assessment_name", assessmentName).eq("class_name", "Grade Two").maybeSingle();
-    if (!assessment) {
-      const created = await admin.from("assessments").insert({
-        school_id: schoolId, class_name: "Grade Two", subject_name: "Mathematics", assessment_name: assessmentName,
-        assessment_type: "test", academic_year: "2026/2027", term: "First Term", max_score: 100,
-        teacher_membership_id: people.teacher.membershipId, status: "published", assessment_date: "2026-11-20", created_by: people.teacher.userId,
-      }).select("id").single();
-      if (created.error || !created.data) throw new Error("Could not create the demo assessment.");
-      assessment = created.data;
-    }
-    for (const [i, student] of students.filter(s => s.className === "Grade Two").entries()) {
-      const { data: score } = await admin.from("assessment_scores").select("id").eq("assessment_id", assessment.id).eq("student_id", student.id).maybeSingle();
-      if (!score) {
-        const { error } = await admin.from("assessment_scores").insert({
-          school_id: schoolId, assessment_id: assessment.id, student_id: student.id,
-          score: [86, 92, 78, 88, 74, 95, 81, 90, 84, 76][i], remarks: i === 0 ? "Good understanding; keep practising." : "Good effort and continued progress.",
-          entered_by: people.teacher.userId,
-        });
-        if (error) throw new Error("Could not add demo assessment scores.");
-      }
-    }
-
-    const timetableRows = [
-      { class_name: "Grade Two", subject_name: "Mathematics", weekday: 1, start_time: "08:00", end_time: "08:45" },
-      { class_name: "Grade Two", subject_name: "English Language", weekday: 1, start_time: "09:00", end_time: "09:45" },
-      { class_name: "Nursery", subject_name: "Numeracy", weekday: 2, start_time: "10:00", end_time: "10:30" },
-    ];
-    for (const row of timetableRows) {
-      const { data: exists } = await admin.from("timetable_entries").select("id").eq("school_id", schoolId).eq("teacher_membership_id", people.teacher.membershipId).eq("class_name", row.class_name).eq("subject_name", row.subject_name).eq("weekday", row.weekday).maybeSingle();
-      if (!exists) {
-        const { error } = await admin.from("timetable_entries").insert({ school_id: schoolId, ...row, teacher_membership_id: people.teacher.membershipId, created_by: people.teacher.userId });
-        if (error) throw new Error("Could not create the demo timetable.");
-      }
-    }
-
     const collector = await admin.from("authorized_collectors").select("id").eq("school_id", schoolId).eq("student_id", students[2].id).eq("full_name", "Sophia James").maybeSingle();
     if (!collector.data) {
       const { error } = await admin.from("authorized_collectors").insert({
@@ -324,7 +298,7 @@ Deno.serve(async (req: Request) => {
     }));
     return reply(200, {
       success: true, school: { id: schoolId, name: DEMO_SCHOOL, slug: DEMO_SLUG },
-      summary: { classes: classSpecs.length, students: students.length, studentsPerClass: 10, parents: 2, staffAccounts: 6, transportRoutes: 1, qrPasses: students.length, sampleAttendance: true, sampleResults: true, sampleTransport: true },
+      summary: { classes: classSpecs.length, students: students.length, studentsPerClass: 10, teachers: teacherNames.length, parents: parentNames.length, staffAccounts: teacherNames.length + 4, transportRoutes: 1, qrPasses: students.length, sampleAttendance: true, sampleResults: false, sampleTransport: true, attendanceOnly: true },
       credentials,
       note: "These are fictional demo identities. Phone numbers are login identifiers only and are not contactable phone numbers.",
     });
